@@ -10,3 +10,20 @@ pom.xml.asc
 .lein-plugins/
 .lein-failures
 .nrepl-port
+
+# IntelliJ IDEA
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+**/.idea/dataSources.ids
+**/.idea/dataSources.xml
+**/.idea/sqlDataSources.xml
+**/.idea/dynamic.xml
+**/.idea/uiDesigner.xml
+**/.idea/dictionaries/
+**/.idea/**
+.idea/workspace.xml
+*.ipr
+*.iws
+*.iml
+out/
+
