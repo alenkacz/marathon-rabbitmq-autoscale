@@ -1,0 +1,2 @@
+# marathon-rabbitmq-autoscale
+
