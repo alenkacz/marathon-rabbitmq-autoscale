@@ -7,11 +7,12 @@
             [marathon-client.core :as marathon]
             [puppetlabs.config.typesafe :as ts]))
 
-(def marathon-client
+(def c
   (marathon/client {:uri "http://localhost:4343"}))
 
-(defn scale-application [app-name]
-  (inspect-app marathon-client "/" + app-name))
+(defn scale-application [app-name c]
+  (println (marathon/inspect-app c (format "/%s" app-name)))
+  true)
 
 (defn message-count
   "Returns number of messages of a queue"
@@ -36,4 +37,4 @@
         ch (lch/open conn)]
     (doseq [app (get config :applications)]
       (if-not
-        (queue-valid ch (get app :queue) (get app :limit)) (scale-application (get app :name))))))
+        (queue-valid ch (get app :queue) (get app :limit)) (scale-application c (get app :name))))))
