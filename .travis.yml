@@ -3,8 +3,6 @@ language: generic
 sudo: required
 env:
   - DOCKER_VERSION=1.12.1
-  - DOCKER_VERSION=1.11.2
-  - DOCKER_VERSION=1.10.3
 
 before_cache:
   - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
@@ -21,7 +19,7 @@ before_install:
   - sudo docker build --tag=build-image .
 
 script:
-  - docker run -v $(pwd):/build -v $HOME/.m2:/root/.m2 -v $HOME/.gradle:/root/.gradle -v /var/run/docker.sock:/var/run/docker.sock build-image test --info
+  - sudo docker run -v $(pwd):/build -v $HOME/.m2:/root/.m2 -v $HOME/.gradle:/root/.gradle -v /var/run/docker.sock:/var/run/docker.sock build-image test --info
 
 after_success:
   - test $TRAVIS_PULL_REQUEST == "false" && test "$TRAVIS_TAG" != "" && test $TRAVIS_REPO_SLUG == "alenkacz/gradle-marathon-deployer" && sudo docker run -v $(pwd):/build -v $HOME/.m2:/root/.m2 -v $HOME/.gradle:/root/.gradle -v /var/run/docker.sock:/var/run/docker.sock -e "BINTRAY_USER=$BINTRAY_USER" -e "BINTRAY_KEY=$BINTRAY_KEY" build-image bintrayUpload --info
