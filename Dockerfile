@@ -3,7 +3,7 @@ FROM java:8u66-jdk
 MAINTAINER varkockova.a@gmail.com
 
 # install Docker
-ENV DOCKER_VERSION=1.12.1
+ENV DOCKER_VERSION=1.10.3
 RUN curl -sSL -O https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} \
     && chmod +x docker-${DOCKER_VERSION} \
     && mv docker-${DOCKER_VERSION} /usr/local/bin/docker
