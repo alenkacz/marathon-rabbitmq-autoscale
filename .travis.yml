@@ -1,8 +1,6 @@
 language: generic
 
 sudo: required
-env:
-  - DOCKER_VERSION=1.12.1
 
 before_cache:
   - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
@@ -13,8 +11,6 @@ cache:
     - $HOME/.m2
 
 before_install:
-  - curl -sSL https://get.docker.com/ | sh
-  - sudo apt-get -y --force-yes install docker-engine=$DOCKER_VERSION-0~precise
   # Build image with building environment
   - sudo docker build --tag=build-image .
 
