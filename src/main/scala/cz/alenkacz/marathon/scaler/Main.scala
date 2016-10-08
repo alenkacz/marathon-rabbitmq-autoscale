@@ -23,6 +23,8 @@ object Main extends StrictLogging {
       factory.setUsername(rabbitMqConfig.getString("username"))
       factory.setPassword(rabbitMqConfig.getString("password"))
 
+      factory.setVirtualHost(rabbitMqConfig.getString("vhost"))
+
       factory
     }
     val rmqConnection = rmqConnectionFactory.newConnection(rabbitMqConfig.getStringList("servers").map(url => new Address(url)).toArray)
