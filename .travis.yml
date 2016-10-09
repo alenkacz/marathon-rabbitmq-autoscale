@@ -15,7 +15,7 @@ cache:
 
 before_install:
   # Build image with building environment
-  - sudo docker build --tag=build-image .
+  - sudo docker build -f ./docker/build/Dockerfile --tag=build-image .
 
 script:
   - sudo docker run -v $(pwd):/build -v $HOME/.m2:/root/.m2 -v $HOME/.gradle:/root/.gradle -v /var/run/docker.sock:/var/run/docker.sock build-image test --info

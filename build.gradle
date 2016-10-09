@@ -16,7 +16,7 @@ apply plugin: 'scala'
 apply plugin: 'docker-compose'
 
 sourceCompatibility = 1.8
-mainClassName = "com.avast.phx.decisionmaker.Server"
+mainClassName = "cz.alenkacz.marathon.scaler.Main"
 
 tasks.composeUp.dependsOn { distTar }
 
