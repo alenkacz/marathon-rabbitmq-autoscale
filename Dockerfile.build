@@ -1,7 +1,6 @@
+# This is Dockerfile that defines build environment.
 FROM java:8u66-jdk
 MAINTAINER varkockova.a@gmail.com
-
-ARG version=1.0-SNAPSHOT
 
 # install Docker
 ENV DOCKER_VERSION=1.10.3
@@ -14,12 +13,11 @@ ENV COMPOSE_VERSION 1.6.2
 RUN curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-Linux-x86_64" \
 	&& chmod +x /usr/local/bin/docker-compose
 
-COPY . /autoscale
-WORKDIR /autoscale
-RUN ./gradlew distTar
+# allow to bind local Docker to the outer Docker
+VOLUME /var/run/docker.sock
 
-RUN tar -xvf ./build/distributions/autoscale-$version.tar -C /var
+VOLUME /build
+WORKDIR /build
 
-WORKDIR /var/autoscale-$version/bin
-
-ENTRYPOINT ["./autoscale"]
+ENTRYPOINT ["/build/gradlew"]
+CMD ["test"]
