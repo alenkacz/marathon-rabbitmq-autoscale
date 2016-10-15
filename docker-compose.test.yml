@@ -1,13 +1,14 @@
-# dockerfile for DockerHub image test
 version: '2'
+# dockerfile for DockerHub image test
 
 services:
   sut:
-    build: .
-    dockerfile: Dockerfile.build
-    command: build-image test --info
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    command: test --info
     volumes:
-      - $(pwd):/build
+      - .:/build
       - $HOME/.m2:/root/.m2
       - $HOME/.gradle:/root/.gradle
       - /var/run/docker.sock:/var/run/docker.sock
