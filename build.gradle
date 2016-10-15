@@ -31,7 +31,7 @@ ext {
 }
 
 dockerCompose {
-    useComposeFiles = ['docker-compose.test.yml']
+    useComposeFiles = ['docker-compose.gradle-test.yml']
 }
 
 dependencies {
