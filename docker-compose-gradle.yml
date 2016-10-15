@@ -1,3 +1,4 @@
+# for tests that are run via docker compose gradle plugin for integration test dependencies
 version: '2'
 
 services:
