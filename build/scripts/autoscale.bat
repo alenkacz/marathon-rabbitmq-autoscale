@@ -63,7 +63,7 @@ set CMD_LINE_ARGS=%*
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\lib\autoscale-1.0-SNAPSHOT.jar;%APP_HOME%\lib\amqp-client-3.6.2.jar;%APP_HOME%\lib\scala-logging_2.11-3.4.0.jar;%APP_HOME%\lib\marathon-client-0.3.0.jar;%APP_HOME%\lib\config-1.3.1.jar;%APP_HOME%\lib\scala-reflect-2.11.8.jar;%APP_HOME%\lib\slf4j-api-1.7.21.jar;%APP_HOME%\lib\feign-core-8.14.1.jar;%APP_HOME%\lib\feign-gson-8.14.1.jar;%APP_HOME%\lib\gson-2.5.jar;%APP_HOME%\lib\scala-library-2.11.8.jar
+set CLASSPATH=%APP_HOME%\lib\autoscale-1.0-SNAPSHOT.jar;%APP_HOME%\lib\amqp-client-3.6.2.jar;%APP_HOME%\lib\scala-logging_2.11-3.5.0.jar;%APP_HOME%\lib\marathon-client-0.3.0.jar;%APP_HOME%\lib\config-1.3.1.jar;%APP_HOME%\lib\slf4j-simple-1.7.21.jar;%APP_HOME%\lib\scala-reflect-2.11.8.jar;%APP_HOME%\lib\slf4j-api-1.7.21.jar;%APP_HOME%\lib\feign-core-8.14.1.jar;%APP_HOME%\lib\feign-gson-8.14.1.jar;%APP_HOME%\lib\gson-2.5.jar;%APP_HOME%\lib\scala-library-2.11.8.jar
 
 @rem Execute autoscale
 "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %AUTOSCALE_OPTS%  -classpath "%CLASSPATH%" cz.alenkacz.marathon.scaler.Main %CMD_LINE_ARGS%
