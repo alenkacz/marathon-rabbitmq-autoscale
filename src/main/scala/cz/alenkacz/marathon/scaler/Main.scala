@@ -59,7 +59,11 @@ object Main extends StrictLogging {
     val applications = config.getConfigList("applications").map(a => Application(a.getString("name"), a.getString("queue"), a.getInt("limit"), a.getOptionalInt("maxInstancesCount")))
     logger.info(s"Loaded ${applications.length} applications")
 
-    checkAndScale(applications, rmqChannelConnection, marathonClient)
+    while (true) {
+      checkAndScale(applications, rmqChannelConnection, marathonClient)
+
+      Thread.sleep(1000)
+    }
   }
 
   implicit class RichConfig(val underlying: Config) extends AnyVal {
