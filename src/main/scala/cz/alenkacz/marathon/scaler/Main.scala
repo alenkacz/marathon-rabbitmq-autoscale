@@ -20,8 +20,19 @@ object Main extends StrictLogging {
     val rmqConnectionFactory: ConnectionFactory = {
       val factory = new ConnectionFactory()
       factory.setAutomaticRecoveryEnabled(true)
-
       factory.setVirtualHost(rabbitMqConfig.getString("vhost"))
+      if (rabbitMqConfig.hasPath("connectTimeout")) {
+        factory.setConnectionTimeout(rabbitMqConfig.getInt("connectTimeout"))
+      }
+      if (rabbitMqConfig.hasPath("networkRecoveryInterval")) {
+        factory.setNetworkRecoveryInterval(rabbitMqConfig.getInt("networkRecoveryInterval"))
+      }
+      if (rabbitMqConfig.hasPath("username")) {
+        factory.setUsername(rabbitMqConfig.getString("username"))
+      }
+      if (rabbitMqConfig.hasPath("password")) {
+        factory.setPassword(rabbitMqConfig.getString("password"))
+      }
 
       factory
     }
