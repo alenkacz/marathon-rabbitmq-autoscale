@@ -1,6 +1,7 @@
 package cz.alenkacz.marathon.scaler
 
 import com.rabbitmq.client.Channel
+import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.marathon.client.Marathon
 import mesosphere.marathon.client.model.v2.{GetAppResponse, GetAppsResponse}
 import org.junit.runner.RunWith
@@ -34,6 +35,12 @@ class MainTest extends TestFixture with MockitoSugar {
     Main.checkAndScale(Array(Application("test", "test", 10, Some(1))), fixture.rmqChannel, marathonMock)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.argThat(new AppWithInstancesCount(1)), ArgumentMatchers.any())
+  }
+
+  it should "start also when no applications are specified" in { fixture =>
+    val actual = Main.getApplicationConfigurationList(ConfigFactory.load("without-applications"))
+
+    actual.isEmpty should be (true)
   }
 
   private def sendMessages(rmqChannel: Channel, queueName: String, number: Int): Unit = {
