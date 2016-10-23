@@ -9,9 +9,9 @@ import mesosphere.marathon.client.{Marathon, MarathonClient}
 
 object Main extends StrictLogging {
 
-  case class Application(name: String, queueName: String, limit: Int, maxInstancesCount: Option[Int] = None)
+  case class Application(name: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None)
 
-  private def isOverLimit(rmqConnection: Channel, queueName: String, limit: Int) = rmqConnection.messageCount(queueName) > limit
+  private def isOverLimit(rmqConnection: Channel, queueName: String, maxMessagesCount: Int) = rmqConnection.messageCount(queueName) > maxMessagesCount
 
   private def rmqConnect(rabbitMqConfig: Config) = {
     val rmqConnectionFactory: ConnectionFactory = {
@@ -39,7 +39,7 @@ object Main extends StrictLogging {
 
   def checkAndScale(applications: Seq[Application], rmqChannel: Channel, marathonClient: Marathon): Unit = {
     applications.foreach(app => {
-      isOverLimit(rmqChannel, app.queueName, app.limit) match {
+      isOverLimit(rmqChannel, app.queueName, app.maxMessagesCount) match {
         case true =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
@@ -56,7 +56,7 @@ object Main extends StrictLogging {
     logger.debug("Connected to rabbitMq server")
     val marathonClient = MarathonClient.getInstance(config.getConfig("marathon").getString("url"))
     logger.debug("Connected to marathon server")
-    val applications = config.getConfigList("applications").map(a => Application(a.getString("name"), a.getString("queue"), a.getInt("limit"), a.getOptionalInt("maxInstancesCount")))
+    val applications = config.getConfigList("applications").map(a => Application(a.getString("name"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount")))
     logger.info(s"Loaded ${applications.length} applications")
 
     while (true) {
