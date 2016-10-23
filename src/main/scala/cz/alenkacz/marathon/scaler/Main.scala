@@ -20,8 +20,19 @@ object Main extends StrictLogging {
     val rmqConnectionFactory: ConnectionFactory = {
       val factory = new ConnectionFactory()
       factory.setAutomaticRecoveryEnabled(true)
-
       factory.setVirtualHost(rabbitMqConfig.getString("vhost"))
+      if (rabbitMqConfig.hasPath("connectTimeout")) {
+        factory.setConnectionTimeout(rabbitMqConfig.getInt("connectTimeout"))
+      }
+      if (rabbitMqConfig.hasPath("networkRecoveryInterval")) {
+        factory.setNetworkRecoveryInterval(rabbitMqConfig.getInt("networkRecoveryInterval"))
+      }
+      if (rabbitMqConfig.hasPath("username")) {
+        factory.setUsername(rabbitMqConfig.getString("username"))
+      }
+      if (rabbitMqConfig.hasPath("password")) {
+        factory.setPassword(rabbitMqConfig.getString("password"))
+      }
 
       factory
     }
@@ -51,18 +62,26 @@ object Main extends StrictLogging {
     val marathonConfig = config.getConfig("marathon")
     val marathonClient = MarathonClient.getInstance(marathonConfig.getString("url"))
     logger.debug("Connected to marathon server")
-    val applications = config.getConfigList("applications").map(a => Application(a.getString("name"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount")))
+    val applications = getApplicationConfigurationList(config)
     logger.info(s"Loaded ${applications.length} applications")
 
     val secondsToCheckLabels = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
-    var autoscaleLabeledApps = findAppsWithAutoscaleLabels(marathonClient)
+    var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient)
     while (true) {
       val startTime = System.currentTimeMillis()
-      autoscaleLabeledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient) else autoscaleLabeledApps
-      checkAndScale(autoscaleLabeledApps ++ applications, rmqChannelConnection, marathonClient)
+      autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient) else autoscaleLabelledApps
+      checkAndScale(autoscaleLabelledApps ++ applications, rmqChannelConnection, marathonClient)
 
       Thread.sleep(1000)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
+    }
+  }
+
+  def getApplicationConfigurationList(config: Config): Seq[Application] = {
+    if (config.hasPath("applications")) {
+      config.getConfigList("applications").map(a => Application(a.getString("name"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount")))
+    } else {
+      Seq.empty
     }
   }
 
