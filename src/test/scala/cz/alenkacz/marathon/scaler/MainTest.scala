@@ -1,9 +1,8 @@
 package cz.alenkacz.marathon.scaler
 
 import com.rabbitmq.client.Channel
-import cz.alenkacz.marathon.scaler.Main.Application
 import mesosphere.marathon.client.Marathon
-import mesosphere.marathon.client.model.v2.GetAppResponse
+import mesosphere.marathon.client.model.v2.{GetAppResponse, GetAppsResponse}
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatcher, ArgumentMatchers, Matchers, Mockito}
 import org.scalatest.junit.JUnitRunner
