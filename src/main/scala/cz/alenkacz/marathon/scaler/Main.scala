@@ -72,7 +72,7 @@ object Main extends StrictLogging {
       autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient) else autoscaleLabelledApps
       checkAndScale(autoscaleLabelledApps ++ applications, rmqChannelConnection, marathonClient)
 
-      Thread.sleep(1000)
+      Thread.sleep(60000)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
     }
   }

@@ -8,10 +8,15 @@ object MarathonProxy extends StrictLogging {
   def scaleUp(marathonClient: Marathon, applicationName: String, maxInstancesCount: Option[Int]): Unit = {
     val applicationState = marathonClient.getApp(applicationName).getApp
     val targetInstanceCount = Math.min(applicationState.getInstances + 1, maxInstancesCount.getOrElse(Integer.MAX_VALUE))
-    logger.info(s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be increased to $targetInstanceCount")
+    targetInstanceCount match {
+      case newInstanceCount if targetInstanceCount != applicationState.getInstances =>
+        logger.info(s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be increased to $targetInstanceCount")
 
-    applicationState.setInstances(targetInstanceCount)
-    marathonClient.updateApp(applicationName, applicationState, true)
+        applicationState.setInstances(targetInstanceCount)
+        marathonClient.updateApp(applicationName, applicationState, true)
+      case _ =>
+        logger.debug(s"Application already have target count of instances which is $targetInstanceCount")
+    }
   }
 
   val QUEUE_LABEL_NAME = "AUTOSCALE_QUEUE"
