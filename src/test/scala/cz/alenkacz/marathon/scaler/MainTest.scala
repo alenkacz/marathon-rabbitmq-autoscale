@@ -34,7 +34,7 @@ class MainTest extends TestFixture with MockitoSugar {
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     Main.checkAndScale(Array(Application("test", "test", 10, Some(1))), fixture.rmqChannel, marathonMock)
 
-    verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.argThat(new AppWithInstancesCount(1)), ArgumentMatchers.any())
+    verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
   it should "start also when no applications are specified" in { fixture =>
