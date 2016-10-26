@@ -14,7 +14,7 @@ import org.mockito.Mockito._
 class MainTest extends TestFixture with MockitoSugar {
   it should "not call marathon when limit is not reached" in { fixture =>
     val marathonMock = mock[Marathon]
-    Main.checkAndScale(Array(Application("test", "test", 10)), fixture.rmqChannel, marathonMock)
+    Main.checkAndScale(Array(Application("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
@@ -23,7 +23,8 @@ class MainTest extends TestFixture with MockitoSugar {
     sendMessages(fixture.rmqChannel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    Main.checkAndScale(Array(Application("test", "test", 10)), fixture.rmqChannel, marathonMock)
+    Thread.sleep(2000)
+    Main.checkAndScale(Array(Application("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
@@ -32,7 +33,7 @@ class MainTest extends TestFixture with MockitoSugar {
     sendMessages(fixture.rmqChannel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    Main.checkAndScale(Array(Application("test", "test", 10, Some(1))), fixture.rmqChannel, marathonMock)
+    Main.checkAndScale(Array(Application("test", "/", "test", 10, Some(1))), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
@@ -44,7 +45,10 @@ class MainTest extends TestFixture with MockitoSugar {
   }
 
   private def sendMessages(rmqChannel: Channel, queueName: String, number: Int): Unit = {
-    1 to number foreach {_ => rmqChannel.basicPublish("", queueName, false, false, null, "test".getBytes) }
+    1 to number foreach {_ =>
+      rmqChannel.basicPublish("", queueName, false, false, null, "test".getBytes)
+    }
+    rmqChannel.waitForConfirmsOrDie()
   }
 
   class AppWithInstancesCount(count: Int) extends ArgumentMatcher[mesosphere.marathon.client.model.v2.App] {

@@ -1,55 +1,31 @@
 package cz.alenkacz.marathon.scaler
 
 import java.time.Duration
-import java.time.temporal.TemporalUnit
-import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.{Config, ConfigFactory}
-import com.rabbitmq.client._
 
 import scala.collection.JavaConversions._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.client.{Marathon, MarathonClient}
 import cz.alenkacz.marathon.scaler.MarathonProxy._
+import com.rabbitmq.http.client.Client
 
 object Main extends StrictLogging {
 
-  private def isOverLimit(rmqConnection: Channel, queueName: String, maxMessagesCount: Int) = rmqConnection.messageCount(queueName) > maxMessagesCount
-
-  private def rmqConnect(rabbitMqConfig: Config) = {
-    val rmqConnectionFactory: ConnectionFactory = {
-      val factory = new ConnectionFactory()
-      factory.setAutomaticRecoveryEnabled(true)
-      factory.setVirtualHost(rabbitMqConfig.getString("vhost"))
-      if (rabbitMqConfig.hasPath("connectTimeout")) {
-        factory.setConnectionTimeout(rabbitMqConfig.getInt("connectTimeout"))
-      }
-      if (rabbitMqConfig.hasPath("networkRecoveryInterval")) {
-        factory.setNetworkRecoveryInterval(rabbitMqConfig.getInt("networkRecoveryInterval"))
-      }
-      if (rabbitMqConfig.hasPath("username")) {
-        factory.setUsername(rabbitMqConfig.getString("username"))
-      }
-      if (rabbitMqConfig.hasPath("password")) {
-        factory.setPassword(rabbitMqConfig.getString("password"))
-      }
-
-      factory
-    }
-    val servers = rabbitMqConfig.getStringList("servers").map(url => new Address(url)).toArray
-    logger.debug(s"RabbitMq servers: ${servers.mkString(",")}")
-    val rmqConnection = rmqConnectionFactory.newConnection(servers)
-    rmqConnection.createChannel()
+  private def isOverLimit(rmqClient: Client, vhost: String, queueName: String, maxMessagesCount: Int) = {
+    val messagesCount = rmqClient.getQueue(vhost, queueName).getTotalMessages
+    logger.info(messagesCount.toString)
+    messagesCount  > maxMessagesCount
   }
 
-  def checkAndScale(applications: Seq[Application], rmqChannel: Channel, marathonClient: Marathon): Unit = {
+  def checkAndScale(applications: Seq[Application], rmqClient: Client, marathonClient: Marathon): Unit = {
     applications.foreach(app => {
-      isOverLimit(rmqChannel, app.queueName, app.maxMessagesCount) match {
+      isOverLimit(rmqClient, app.vhost, app.queueName, app.maxMessagesCount) match {
         case true =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
         case false =>
-          logger.info(s"No need to scale ${app.name}. Queue bounds are inside the limits.")
+          logger.info(s"No need to scale ${app.name}. Queue message count is inside the limits.")
       }
     })
   }
@@ -57,7 +33,8 @@ object Main extends StrictLogging {
   def main(args: Array[String]): Unit = {
     logger.debug("Loading application")
     val config = ConfigFactory.load()
-    val rmqChannelConnection = rmqConnect(config.getConfig("rabbitMq"))
+    val rabbitMqConfig = config.getConfig("rabbitMq")
+    val rmqClient = new Client(rabbitMqConfig.getString("httpApiEndpoint"), rabbitMqConfig.getString("username"), rabbitMqConfig.getString("password"))
     logger.debug("Connected to rabbitMq server")
     val marathonConfig = config.getConfig("marathon")
     val marathonClient = MarathonClient.getInstance(marathonConfig.getString("url"))
@@ -70,7 +47,7 @@ object Main extends StrictLogging {
     while (true) {
       val startTime = System.currentTimeMillis()
       autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient) else autoscaleLabelledApps
-      checkAndScale(autoscaleLabelledApps ++ applications, rmqChannelConnection, marathonClient)
+      checkAndScale(autoscaleLabelledApps ++ applications, rmqClient, marathonClient)
 
       Thread.sleep(60000)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
@@ -79,7 +56,7 @@ object Main extends StrictLogging {
 
   def getApplicationConfigurationList(config: Config): Seq[Application] = {
     if (config.hasPath("applications")) {
-      config.getConfigList("applications").map(a => Application(a.getString("name"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount")))
+      config.getConfigList("applications").map(a => Application(a.getString("name"), a.getOptionalString("vhost").getOrElse("/"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount")))
     } else {
       Seq.empty
     }
@@ -88,6 +65,12 @@ object Main extends StrictLogging {
   implicit class RichConfig(val underlying: Config) extends AnyVal {
     def getOptionalInt(path: String): Option[Int] = if (underlying.hasPath(path)) {
       Some(underlying.getInt(path))
+    } else {
+      None
+    }
+
+    def getOptionalString(path: String): Option[String] = if (underlying.hasPath(path)) {
+      Some(underlying.getString(path))
     } else {
       None
     }

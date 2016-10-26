@@ -20,6 +20,7 @@ object MarathonProxy extends StrictLogging {
   }
 
   val QUEUE_LABEL_NAME = "AUTOSCALE_QUEUE"
+  val VHOST_LABEL_NAME = "AUTOSCALE_VHOST"
   val MAX_MESSAGES_LABEL_NAME = "AUTOSCALE_MAXMESSAGES"
   val MAXINSTANCES_LABEL_NAME = "AUTOSCALE_MAXINSTANCES"
 
@@ -29,9 +30,10 @@ object MarathonProxy extends StrictLogging {
       .map(a => {
         val labels = a.getLabels.asScala
         val queueName = labels.find(_._1.equalsIgnoreCase(QUEUE_LABEL_NAME)).map(_._2.trim).get
+        val vhostName = labels.find(_._1.equalsIgnoreCase(VHOST_LABEL_NAME)).map(_._2.trim).getOrElse("/")
         val maxMessagesCount = labels.find(_._1.equalsIgnoreCase(MAX_MESSAGES_LABEL_NAME)).map(_._2).get.toInt
         val maxInstancesCount = labels.find(_._1.equalsIgnoreCase(MAXINSTANCES_LABEL_NAME)).map(_._2).map(_.toInt)
-        Application(a.getId, queueName, maxMessagesCount, maxInstancesCount)
+        Application(a.getId, vhostName, queueName, maxMessagesCount, maxInstancesCount)
       })
 
     logger.info(s"Configured following apps via marathon labels: '${labelledApps.map(a => a.name).mkString(",")}'")
