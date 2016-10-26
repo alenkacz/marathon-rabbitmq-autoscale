@@ -1,5 +1,7 @@
 package cz.alenkacz.marathon.scaler
 
+import java.time.Duration
+
 import com.rabbitmq.client.Channel
 import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.marathon.client.Marathon
@@ -19,11 +21,20 @@ class MainTest extends TestFixture with MockitoSugar {
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
+  def limitReached(millis: Long, duration: Duration) = System.currentTimeMillis() - millis > duration.toMillis
+
+  def waitForMessages(b: () => Boolean, duration: Duration) = {
+    val millis = System.currentTimeMillis()
+    while (!b() && !limitReached(millis, duration)) {
+
+    }
+  }
+
   it should "call marathon when limit is reached" in { fixture =>
     sendMessages(fixture.rmqChannel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    Thread.sleep(2000)
+    waitForMessages(() => fixture.rmqClient.getQueue("/", "test").getTotalMessages == 15, Duration.ofSeconds(5))
     Main.checkAndScale(Array(Application("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
