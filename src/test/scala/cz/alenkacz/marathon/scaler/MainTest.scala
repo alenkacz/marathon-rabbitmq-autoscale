@@ -16,7 +16,7 @@ import org.mockito.Mockito._
 class MainTest extends TestFixture with MockitoSugar {
   it should "not call marathon when limit is not reached" in { fixture =>
     val marathonMock = mock[Marathon]
-    Main.checkAndScale(Array(Application("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
@@ -35,7 +35,7 @@ class MainTest extends TestFixture with MockitoSugar {
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(() => fixture.rmqClient.getQueue("/", "test").getTotalMessages == 15, Duration.ofSeconds(5))
-    Main.checkAndScale(Array(Application("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
@@ -44,13 +44,19 @@ class MainTest extends TestFixture with MockitoSugar {
     sendMessages(fixture.rmqChannel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    Main.checkAndScale(Array(Application("test", "/", "test", 10, Some(1))), fixture.rmqClient, marathonMock)
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10, Some(1))), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
   it should "start also when no applications are specified" in { fixture =>
-    val actual = Main.getApplicationConfigurationList(ConfigFactory.load("without-applications"))
+    val actual = Main.getApplicationConfigurationList(ConfigFactory.load("without-applications"), fixture.rmqClient)
+
+    actual.isEmpty should be (true)
+  }
+
+  it should "return application configuration list without apps with non-existing queues" in { fixture =>
+    val actual = Main.getApplicationConfigurationList(ConfigFactory.load("with-non-existing-queues"), fixture.rmqClient)
 
     actual.isEmpty should be (true)
   }
@@ -72,4 +78,6 @@ class MainTest extends TestFixture with MockitoSugar {
     response.getApp.setInstances(instancesCount)
     response
   }
+
+  case class TestApplication(name: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
 }

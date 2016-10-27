@@ -39,14 +39,14 @@ object Main extends StrictLogging {
     val marathonConfig = config.getConfig("marathon")
     val marathonClient = MarathonClient.getInstance(marathonConfig.getString("url"))
     logger.debug("Connected to marathon server")
-    val applications = getApplicationConfigurationList(config)
+    val applications = getApplicationConfigurationList(config, rmqClient)
     logger.info(s"Loaded ${applications.length} applications")
 
     val secondsToCheckLabels = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
-    var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient)
+    var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClient)
     while (true) {
       val startTime = System.currentTimeMillis()
-      autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient) else autoscaleLabelledApps
+      autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClient) else autoscaleLabelledApps
       checkAndScale(autoscaleLabelledApps ++ applications, rmqClient, marathonClient)
 
       Thread.sleep(60000)
@@ -54,9 +54,9 @@ object Main extends StrictLogging {
     }
   }
 
-  def getApplicationConfigurationList(config: Config): Seq[Application] = {
+  def getApplicationConfigurationList(config: Config, rabbitMqClient: Client): Seq[Application] = {
     if (config.hasPath("applications")) {
-      config.getConfigList("applications").map(a => Application(a.getString("name"), a.getOptionalString("vhost").getOrElse("/"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount")))
+      config.getConfigList("applications").map(a => ApplicationFactory.tryCreate(rabbitMqClient, a.getString("name"), a.getOptionalString("vhost").getOrElse("/"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount"))).filter(_.isSuccess).map(_.get)
     } else {
       Seq.empty
     }
