@@ -41,6 +41,7 @@ object Main extends StrictLogging {
     logger.debug("Connected to marathon server")
     val applications = getApplicationConfigurationList(config, rmqClient)
     logger.info(s"Loaded ${applications.length} applications")
+    val checkIntervalMilliseconds = config.getOptionalDuration("interval").getOrElse(Duration.ofSeconds(60)).toMillis
 
     val secondsToCheckLabels = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
     var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClient)
@@ -49,7 +50,7 @@ object Main extends StrictLogging {
       autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClient) else autoscaleLabelledApps
       checkAndScale(autoscaleLabelledApps ++ applications, rmqClient, marathonClient)
 
-      Thread.sleep(60000)
+      Thread.sleep(checkIntervalMilliseconds)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
     }
   }
