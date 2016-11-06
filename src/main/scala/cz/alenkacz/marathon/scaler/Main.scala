@@ -8,14 +8,18 @@ import scala.collection.JavaConversions._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.client.{Marathon, MarathonClient}
 import cz.alenkacz.marathon.scaler.MarathonProxy._
-import com.rabbitmq.http.client.Client
+import cz.alenkacz.marathon.scaler.rabbitmq.Client
+
+import scala.util.Success
 
 object Main extends StrictLogging {
 
-  private def isOverLimit(rmqClient: Client, vhost: String, queueName: String, maxMessagesCount: Int) = {
-    val messagesCount = rmqClient.getQueue(vhost, queueName).getTotalMessages
-    logger.info(messagesCount.toString)
-    messagesCount  > maxMessagesCount
+  private def isOverLimit(rmqClient: Client, vhost: String, queueName: String, maxMessagesCount: Int): Boolean = {
+    rmqClient.messageCount(vhost, queueName) match {
+      case Success(count) =>
+        count > maxMessagesCount
+      case _ => false
+    }
   }
 
   def checkAndScale(applications: Seq[Application], rmqClient: Client, marathonClient: Marathon): Unit = {

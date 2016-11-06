@@ -1,7 +1,7 @@
 package cz.alenkacz.marathon.scaler
 
 import com.rabbitmq.client._
-import com.rabbitmq.http.client.Client
+import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import org.scalatest.{Matchers, Outcome}
 
 abstract class TestFixture extends org.scalatest.fixture.FlatSpec with Matchers {

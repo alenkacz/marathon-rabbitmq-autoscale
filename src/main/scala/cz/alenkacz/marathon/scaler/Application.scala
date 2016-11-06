@@ -1,7 +1,7 @@
 package cz.alenkacz.marathon.scaler
 
-import com.rabbitmq.http.client.Client
 import com.typesafe.scalalogging.StrictLogging
+import cz.alenkacz.marathon.scaler.rabbitmq.Client
 
 import scala.util.{Failure, Success, Try}
 
@@ -15,11 +15,15 @@ trait Application {
 
 object ApplicationFactory extends StrictLogging {
   def tryCreate(rabbitMqClient: Client, name: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None): Try[Application] = {
-    rabbitMqClient.getQueue(vhost, queueName) match {
-      case null =>
+    rabbitMqClient.queueExists(vhost, queueName) match {
+      case Success(true) =>
+        Success(ApplicationImpl(name, vhost, queueName, maxMessagesCount, maxInstancesCount))
+      case Failure(e) =>
+        logger.warn(s"Unable to verify that '$queueName' for application '$name' exists. Ignoring this application configuration.", e)
+        Failure(e)
+      case _ =>
         logger.warn(s"Queue '$queueName' for application '$name' does not exist. Ignoring this application configuration.")
         Failure(new Exception(s"Queue '$queueName' for application '$name' does not exist."))
-      case _ => Success(ApplicationImpl(name, vhost, queueName, maxMessagesCount, maxInstancesCount))
     }
   }
 
