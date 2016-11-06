@@ -1,7 +1,7 @@
 package cz.alenkacz.marathon.scaler
 
-import com.rabbitmq.http.client.Client
 import com.typesafe.scalalogging.StrictLogging
+import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import mesosphere.marathon.client.Marathon
 
 import collection.JavaConverters._

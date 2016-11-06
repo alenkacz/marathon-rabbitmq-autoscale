@@ -34,7 +34,7 @@ class MainTest extends TestFixture with MockitoSugar {
     sendMessages(fixture.rmqChannel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    waitForMessages(() => fixture.rmqClient.getQueue("/", "test").getTotalMessages == 15, Duration.ofSeconds(5))
+    waitForMessages(() => fixture.rmqClient.messageCount("/", "test").get == 15, Duration.ofSeconds(5))
     Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
