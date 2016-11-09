@@ -8,7 +8,7 @@ abstract class TestFixture extends org.scalatest.fixture.FlatSpec with Matchers 
   case class FixtureParam(rmqChannel: Channel, rmqClient: Client)
 
   override protected def withFixture(test: OneArgTest): Outcome = {
-    val fixture = FixtureParam(rmqConnect(), new Client(s"http://${System.getenv("RABBITMQ_HOST")}:${System.getenv("RABBITMQ_TCP_15672")}/api/", "guest", "guest"))
+    val fixture = FixtureParam(rmqConnect(), new Client(s"http://${System.getenv("RABBITMQ_HOST")}:${System.getenv("RABBITMQ_TCP_15672")}/api", "guest", "guest"))
     fixture.rmqChannel.queueDeclare("test", true, false, false, null)
     fixture.rmqChannel.confirmSelect()
     try super.withFixture(test.toNoArgTest(fixture))
