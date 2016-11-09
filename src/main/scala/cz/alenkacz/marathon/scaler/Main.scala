@@ -4,16 +4,15 @@ import java.time.Duration
 
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.collection.JavaConversions._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.client.{Marathon, MarathonClient}
 import cz.alenkacz.marathon.scaler.MarathonProxy._
 import cz.alenkacz.marathon.scaler.rabbitmq.Client
+import cz.alenkacz.marathon.scaler.ExtendedConfig._
 
 import scala.util.Success
 
 object Main extends StrictLogging {
-
   private def isOverLimit(rmqClient: Client, vhost: String, queueName: String, maxMessagesCount: Int): Boolean = {
     rmqClient.messageCount(vhost, queueName) match {
       case Success(count) =>
@@ -22,13 +21,17 @@ object Main extends StrictLogging {
     }
   }
 
-  def checkAndScale(applications: Seq[Application], rmqClient: Client, marathonClient: Marathon): Unit = {
+  def isCooledDown(app: Application, lastScaled: Map[String, Long], currentTime: Long, checkPeriod: Long, coolDown: Int): Boolean = currentTime < lastScaled.getOrElse(app.name, 0l) + (checkPeriod * coolDown)
+
+  def checkAndScale(applications: Seq[Application], rmqClient: Client, marathonClient: Marathon, isCooledDown: Application => Boolean): Unit = {
     applications.foreach(app => {
-      isOverLimit(rmqClient, app.vhost, app.queueName, app.maxMessagesCount) match {
-        case true =>
+      (isOverLimit(rmqClient, app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
+        case (true, false) =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
-        case false =>
+        case (true,true) =>
+          logger.debug(s"Application ${app.name} is over limit but is currently in cooldown period - not scaling")
+        case (false, _) =>
           logger.info(s"No need to scale ${app.name}. Queue message count is inside the limits.")
       }
     })
@@ -46,44 +49,18 @@ object Main extends StrictLogging {
     val applications = getApplicationConfigurationList(config, rmqClient)
     logger.info(s"Loaded ${applications.length} applications")
     val checkIntervalMilliseconds = config.getOptionalDuration("interval").getOrElse(Duration.ofSeconds(60)).toMillis
+    val cooldown = config.getOptionalInt("cooldown").getOrElse(5)
+    val lastScaled = Map.empty[String, Long]
 
     val secondsToCheckLabels = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
     var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClient)
     while (true) {
       val startTime = System.currentTimeMillis()
       autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClient) else autoscaleLabelledApps
-      checkAndScale(autoscaleLabelledApps ++ applications, rmqClient, marathonClient)
+      checkAndScale(autoscaleLabelledApps ++ applications, rmqClient, marathonClient, app => isCooledDown(app, lastScaled, System.currentTimeMillis(), checkIntervalMilliseconds, cooldown))
 
       Thread.sleep(checkIntervalMilliseconds)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
-    }
-  }
-
-  def getApplicationConfigurationList(config: Config, rabbitMqClient: Client): Seq[Application] = {
-    if (config.hasPath("applications")) {
-      config.getConfigList("applications").map(a => ApplicationFactory.tryCreate(rabbitMqClient, a.getString("name"), a.getOptionalString("vhost").getOrElse("/"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount"))).filter(_.isSuccess).map(_.get)
-    } else {
-      Seq.empty
-    }
-  }
-
-  implicit class RichConfig(val underlying: Config) extends AnyVal {
-    def getOptionalInt(path: String): Option[Int] = if (underlying.hasPath(path)) {
-      Some(underlying.getInt(path))
-    } else {
-      None
-    }
-
-    def getOptionalString(path: String): Option[String] = if (underlying.hasPath(path)) {
-      Some(underlying.getString(path))
-    } else {
-      None
-    }
-
-    def getOptionalDuration(path: String): Option[Duration] = if (underlying.hasPath(path)) {
-      Some(underlying.getDuration(path))
-    } else {
-      None
     }
   }
 }

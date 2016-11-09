@@ -16,18 +16,9 @@ import org.mockito.Mockito._
 class MainTest extends TestFixture with MockitoSugar {
   it should "not call marathon when limit is not reached" in { fixture =>
     val marathonMock = mock[Marathon]
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock, app => false)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
-  }
-
-  def limitReached(millis: Long, duration: Duration) = System.currentTimeMillis() - millis > duration.toMillis
-
-  def waitForMessages(b: () => Boolean, duration: Duration) = {
-    val millis = System.currentTimeMillis()
-    while (!b() && !limitReached(millis, duration)) {
-
-    }
   }
 
   it should "call marathon when limit is reached" in { fixture =>
@@ -35,7 +26,7 @@ class MainTest extends TestFixture with MockitoSugar {
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(() => fixture.rmqClient.messageCount("/", "test").get == 15, Duration.ofSeconds(5))
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock)
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock, app => false)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
@@ -44,21 +35,39 @@ class MainTest extends TestFixture with MockitoSugar {
     sendMessages(fixture.rmqChannel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10, Some(1))), fixture.rmqClient, marathonMock)
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10, Some(1))), fixture.rmqClient, marathonMock, app => false)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
-  it should "start also when no applications are specified" in { fixture =>
-    val actual = Main.getApplicationConfigurationList(ConfigFactory.load("without-applications"), fixture.rmqClient)
+  it should "cool not scale up when cooled down" in { fixture =>
+    sendMessages(fixture.rmqChannel, "test", 15)
+    val marathonMock = mock[Marathon]
+    when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
+    waitForMessages(() => fixture.rmqClient.messageCount("/", "test").get == 15, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock, app => true)
 
-    actual.isEmpty should be (true)
+    verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
-  it should "return application configuration list without apps with non-existing queues" in { fixture =>
-    val actual = Main.getApplicationConfigurationList(ConfigFactory.load("with-non-existing-queues"), fixture.rmqClient)
+  it should "be cooled down" in { fixture =>
+    val actual = Main.isCooledDown(TestApplication("test", "/", "test", 10), Map("test" -> 1), 1000, 5000, 5)
 
-    actual.isEmpty should be (true)
+    actual should be (true)
+  }
+
+  it should "not be cooled down" in { fixture =>
+    val actual = Main.isCooledDown(TestApplication("test", "/", "test", 10), Map("test" -> 1), 1000000, 5000, 5)
+
+    actual should be (false)
+  }
+
+  def limitReached(millis: Long, duration: Duration) = System.currentTimeMillis() - millis > duration.toMillis
+
+  def waitForMessages(b: () => Boolean, duration: Duration) = {
+    val millis = System.currentTimeMillis()
+    while (!b() && !limitReached(millis, duration)) {
+    }
   }
 
   private def sendMessages(rmqChannel: Channel, queueName: String, number: Int): Unit = {
