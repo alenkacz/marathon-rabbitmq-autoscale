@@ -16,48 +16,59 @@ import org.mockito.Mockito._
 class MainTest extends TestFixture with MockitoSugar {
   it should "not call marathon when limit is not reached" in { fixture =>
     val marathonMock = mock[Marathon]
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock, app => false)
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)), fixture.rmqClients, marathonMock, app => false)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
   it should "call marathon when limit is reached" in { fixture =>
-    sendMessages(fixture.rmqChannel, "test", 15)
+    sendMessages(fixture.rmqClients("").channel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    waitForMessages(() => fixture.rmqClient.messageCount("/", "test").get == 15, Duration.ofSeconds(5))
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock, app => false)
+    waitForMessages(() => fixture.rmqClients("").messageCount("/", "test").get == 15, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)), fixture.rmqClients, marathonMock, app => false)
+
+    verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
+  }
+
+
+  it should "call marathon when limit is reached for application which used non-default RabbitMQ" in { fixture =>
+    sendMessages(fixture.rmqClients("second").channel, "test", 15)
+    val marathonMock = mock[Marathon]
+    when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
+    waitForMessages(() => fixture.rmqClients("second").messageCount("/", "test").get == 15, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "second", "/", "test", 10)), fixture.rmqClients, marathonMock, app => false)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
   it should "not scale to more than maxInstancesCount" in { fixture =>
-    sendMessages(fixture.rmqChannel, "test", 15)
+    sendMessages(fixture.rmqClients("").channel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10, Some(1))), fixture.rmqClient, marathonMock, app => false)
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10, Some(1))), fixture.rmqClients, marathonMock, app => false)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
   it should "cool not scale up when cooled down" in { fixture =>
-    sendMessages(fixture.rmqChannel, "test", 15)
+    sendMessages(fixture.rmqClients("").channel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
-    waitForMessages(() => fixture.rmqClient.messageCount("/", "test").get == 15, Duration.ofSeconds(5))
-    Main.checkAndScale(Array(TestApplication("test", "/", "test", 10)), fixture.rmqClient, marathonMock, app => true)
+    waitForMessages(() => fixture.rmqClients("").messageCount("/", "test").get == 15, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)), fixture.rmqClients, marathonMock, app => true)
 
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
   it should "be cooled down" in { fixture =>
-    val actual = Main.isCooledDown(TestApplication("test", "/", "test", 10), Map("test" -> 1), 1000, 5000, 5)
+    val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> 1), 1000, 5000, 5)
 
     actual should be (true)
   }
 
   it should "not be cooled down" in { fixture =>
-    val actual = Main.isCooledDown(TestApplication("test", "/", "test", 10), Map("test" -> 1), 1000000, 5000, 5)
+    val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> 1), 1000000, 5000, 5)
 
     actual should be (false)
   }
@@ -88,5 +99,5 @@ class MainTest extends TestFixture with MockitoSugar {
     response
   }
 
-  case class TestApplication(name: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
+  case class TestApplication(name: String, serverName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
 }

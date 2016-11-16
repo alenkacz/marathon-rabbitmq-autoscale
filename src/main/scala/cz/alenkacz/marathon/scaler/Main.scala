@@ -2,13 +2,14 @@ package cz.alenkacz.marathon.scaler
 
 import java.time.Duration
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.client.{Marathon, MarathonClient}
 import cz.alenkacz.marathon.scaler.MarathonProxy._
 import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import cz.alenkacz.marathon.scaler.ExtendedConfig._
+import collection.JavaConverters._
 
 import scala.util.Success
 
@@ -23,9 +24,9 @@ object Main extends StrictLogging {
 
   def isCooledDown(app: Application, lastScaled: Map[String, Long], currentTime: Long, checkPeriod: Long, coolDown: Int): Boolean = currentTime < lastScaled.getOrElse(app.name, 0l) + (checkPeriod * coolDown)
 
-  def checkAndScale(applications: Seq[Application], rmqClient: Client, marathonClient: Marathon, isCooledDown: Application => Boolean): Unit = {
+  def checkAndScale(applications: Seq[Application], rmqClients: Map[String, Client], marathonClient: Marathon, isCooledDown: Application => Boolean): Unit = {
     applications.foreach(app => {
-      (isOverLimit(rmqClient, app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
+      (isOverLimit(rmqClients(app.serverName), app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
         case (true, false) =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
@@ -40,24 +41,24 @@ object Main extends StrictLogging {
   def main(args: Array[String]): Unit = {
     logger.debug("Loading application")
     val config = ConfigFactory.load()
-    val rabbitMqConfig = config.getConfig("rabbitMq")
-    val rmqClient = new Client(rabbitMqConfig.getString("httpApiEndpoint"), rabbitMqConfig.getString("username"), rabbitMqConfig.getString("password"))
+    val rabbitMqConfigs = config.getConfigList("rabbitMq")
+    val rmqClients = rabbitMqConfigs.asScala.map(rmq => rmq.getString("name") -> new Client(rmq.getString("httpApiEndpoint"), rmq.getString("username"), rmq.getString("password"))).toMap
     logger.debug("Connected to rabbitMq server")
     val marathonConfig = config.getConfig("marathon")
     val marathonClient = MarathonClient.getInstance(marathonConfig.getString("url"))
     logger.debug("Connected to marathon server")
-    val applications = getApplicationConfigurationList(config, rmqClient)
+    val applications = getApplicationConfigurationList(config, rmqClients)
     logger.info(s"Loaded ${applications.length} applications")
     val checkIntervalMilliseconds = config.getOptionalDuration("interval").getOrElse(Duration.ofSeconds(60)).toMillis
     val cooldown = config.getOptionalInt("cooldown").getOrElse(5)
     val lastScaled = Map.empty[String, Long]
 
     val secondsToCheckLabels = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
-    var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClient)
+    var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClients)
     while (true) {
       val startTime = System.currentTimeMillis()
-      autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClient) else autoscaleLabelledApps
-      checkAndScale(autoscaleLabelledApps ++ applications, rmqClient, marathonClient, app => isCooledDown(app, lastScaled, System.currentTimeMillis(), checkIntervalMilliseconds, cooldown))
+      autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClients) else autoscaleLabelledApps
+      checkAndScale(autoscaleLabelledApps ++ applications, rmqClients, marathonClient, app => isCooledDown(app, lastScaled, System.currentTimeMillis(), checkIntervalMilliseconds, cooldown))
 
       Thread.sleep(checkIntervalMilliseconds)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))

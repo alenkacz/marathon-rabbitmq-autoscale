@@ -13,7 +13,7 @@ class MarathonProxyTest extends TestFixture with MockitoSugar {
   it should "parse configuration from marathon labels" in { fixture =>
     val marathonMock = mock[Marathon]
     when(marathonMock.getApps).thenReturn(appWithLabel("labeled-app"))
-    val actual = MarathonProxy.findAppsWithAutoscaleLabels(marathonMock, fixture.rmqClient)
+    val actual = MarathonProxy.findAppsWithAutoscaleLabels(marathonMock, fixture.rmqClients)
 
     actual.length should be (1)
     actual.head.name should be ("labeled-app")
@@ -22,7 +22,7 @@ class MarathonProxyTest extends TestFixture with MockitoSugar {
   it should "return empty apps when no interesting labels found" in { fixture =>
     val marathonMock = mock[Marathon]
     when(marathonMock.getApps).thenReturn(appWithoutLabel("labeled-app"))
-    val actual = MarathonProxy.findAppsWithAutoscaleLabels(marathonMock, fixture.rmqClient)
+    val actual = MarathonProxy.findAppsWithAutoscaleLabels(marathonMock, fixture.rmqClients)
 
     actual.isEmpty should be (true)
   }
@@ -30,7 +30,7 @@ class MarathonProxyTest extends TestFixture with MockitoSugar {
   it should "not consider applications with non-existing queues" in { fixture =>
     val marathonMock = mock[Marathon]
     when(marathonMock.getApps).thenReturn(appWithLabel("labeled-app", "non-existing-queue"))
-    val actual = MarathonProxy.findAppsWithAutoscaleLabels(marathonMock, fixture.rmqClient)
+    val actual = MarathonProxy.findAppsWithAutoscaleLabels(marathonMock, fixture.rmqClients)
 
     actual.isEmpty should be (true)
   }

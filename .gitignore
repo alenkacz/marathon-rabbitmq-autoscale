@@ -1,6 +1,9 @@
 pom.xml
 pom.xml.asc
 *jar
+*.war
+*.ear
+*.log
 /lib/
 /classes/
 /target/
@@ -10,3 +13,18 @@ pom.xml.asc
 .lein-plugins/
 .lein-failures
 .nrepl-port
+
+.gradle
+build/
+
+.idea/
+/out/
+.idea_modules/
+
+.scala_dependencies
+.worksheet
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+.gradletasknamecache
+gradle/wrapper/gradle-wrapper.jar

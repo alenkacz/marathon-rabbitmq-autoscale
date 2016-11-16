@@ -7,3 +7,8 @@ services:
     ports:
       - "5672"
       - "15672"
+  rabbitmq-second:
+    image: rabbitmq:3.6-management
+    ports:
+      - "5672"
+      - "15672"
