@@ -6,7 +6,29 @@ Adds possibility to automatically scale applications running in Marathon that ar
 Marathon-rabbitmq-autoscale (autoscaler) is distributed as docker image available on [Docker Hub](https://hub.docker.com/r/alenkacz/marathon-rabbitmq-autoscale/).
 
 ## How to run autoscaler
-Since the application is dependent on Marathon, the most natural way to deploy it to run it in marathon. It is configured using environment variables.
+Since the application is dependent on Marathon, the most natural way to deploy it to run it in marathon. It is configured using environment variable JAVA_OPTS - it accept java command line arguments as a content (see [java documentation](https://docs.oracle.com/javase/tutorial/essential/environment/cmdLineArgs.html)).
+
+See example configuration attached:
+```json
+{
+  "id": "/autoscaler",
+  "cpus": 1,
+  "mem": 256,
+  "disk": 0,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "alenkacz/marathon-rabbitmq-autoscale",
+      "network": "BRIDGE",
+      "forcePullImage": true
+    }
+  },
+  "env": {
+    "JAVA_OPTS": "-DrabbitMq.username=user -DrabbitMq.password=password -DrabbitMq.httpApiEndpoint=https://rabbitmq.yourdomain.com:15671/api -Dmarathon.url=http://marathon.yourdomain.com/"
+  }
+}
+```
 
 ## How to configure applications to be autoscaled
 There are two ways how to configure application to be automatically scaled:
@@ -37,9 +59,10 @@ Example of api call
 {
     "id": "/product/service/myApp",
     "labels": {
-        "LABEL_NAME": "LABEL_VALUE"
+        "AUTOSCALE_QUEUE": "queuename"
     }
 }
 ```
 
 ### Altering autoscaler configuration
+You can also configure the application directly as an autoscaler configuration. See the section 'How to run autoscaler' and add configuration via java commandline arguments. For example *-Dapps.0.name=testapp*. The format of this is determined by the choice of [configuration library](https://github.com/typesafehub/config).
