@@ -25,7 +25,7 @@ object MarathonProxy extends StrictLogging {
   val VHOST_LABEL_NAME = "AUTOSCALE_VHOST"
   val MAX_MESSAGES_LABEL_NAME = "AUTOSCALE_MAXMESSAGES"
   val MAXINSTANCES_LABEL_NAME = "AUTOSCALE_MAXINSTANCES"
-  val SERVER_NAME_LABEL_NAME = "AUTOSCALE_SERVERNAME"
+  val RMQ_SERVER_NAME_LABEL_NAME = "AUTOSCALE_RMQSERVERNAME"
 
   def findAppsWithAutoscaleLabels(marathonClient: Marathon, rabbitMqClients: Map[String, Client]): Seq[Application] = {
     val labelledApps = marathonClient.getApps.getApps.asScala
@@ -36,7 +36,7 @@ object MarathonProxy extends StrictLogging {
         val vhostName = labels.find(_._1.equalsIgnoreCase(VHOST_LABEL_NAME)).map(_._2.trim).getOrElse("/")
         val maxMessagesCount = labels.find(_._1.equalsIgnoreCase(MAX_MESSAGES_LABEL_NAME)).map(_._2).get.toInt
         val maxInstancesCount = labels.find(_._1.equalsIgnoreCase(MAXINSTANCES_LABEL_NAME)).map(_._2).map(_.toInt)
-        val serverName = labels.find(_._1.equalsIgnoreCase(SERVER_NAME_LABEL_NAME)).map(_._2.trim).getOrElse("")
+        val serverName = labels.find(_._1.equalsIgnoreCase(RMQ_SERVER_NAME_LABEL_NAME)).map(_._2.trim).getOrElse("")
         ApplicationFactory.tryCreate(rabbitMqClients(serverName), a.getId, serverName, vhostName, queueName, maxMessagesCount, maxInstancesCount)
       }).filter(_.isSuccess).map(_.get)
 

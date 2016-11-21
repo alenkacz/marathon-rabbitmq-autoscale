@@ -46,7 +46,7 @@ After you deploy your app to Marathon, you have to add these labels:
 - *AUTOSCALE_VHOST* (optional) - if the queue is in a different vhost than the default one "/" you have to specify it
 - *AUTOSCALE_MAXMESSAGES* - when this message count is hit, number of instances of this app will be increased
 - *AUTOSCALE_MAXINSTANCES* (optional) - maximum number of instances after which the app cannot be autoscaled
-- *AUTOSCALE_SERVERNAME* (optional) - the RabbitMQ server name from the configuration where the queue exists
+- *AUTOSCALE_RMQSERVERNAME* (optional) - the RabbitMQ server name from the configuration where the queue exists
 
 #### How to add label to a Marathon application
 It is possible to add label from:
