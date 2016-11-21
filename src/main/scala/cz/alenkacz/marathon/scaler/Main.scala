@@ -42,7 +42,7 @@ object Main extends StrictLogging {
     logger.debug("Loading application")
     val config = ConfigFactory.load()
     val rabbitMqConfigs = config.getConfigList("rabbitMq")
-    val rmqClients = rabbitMqConfigs.asScala.map(rmq => rmq.getString("name") -> new Client(rmq.getString("httpApiEndpoint"), rmq.getString("username"), rmq.getString("password"))).toMap
+    val rmqClients = rabbitMqConfigs.asScala.map(rmq => rmq.getOptionalString("name").getOrElse("") -> new Client(rmq.getString("httpApiEndpoint"), rmq.getString("username"), rmq.getString("password"))).toMap
     logger.debug("Connected to rabbitMq server")
     val marathonConfig = config.getConfig("marathon")
     val marathonClient = MarathonClient.getInstance(marathonConfig.getString("url"))
