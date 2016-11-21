@@ -99,5 +99,5 @@ class MainTest extends TestFixture with MockitoSugar {
     response
   }
 
-  case class TestApplication(name: String, serverName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
+  case class TestApplication(name: String, rmqServerName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
 }

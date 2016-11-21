@@ -26,7 +26,7 @@ object Main extends StrictLogging {
 
   def checkAndScale(applications: Seq[Application], rmqClients: Map[String, Client], marathonClient: Marathon, isCooledDown: Application => Boolean): Unit = {
     applications.foreach(app => {
-      (isOverLimit(rmqClients(app.serverName), app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
+      (isOverLimit(rmqClients(app.rmqServerName), app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
         case (true, false) =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
