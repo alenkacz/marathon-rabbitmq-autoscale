@@ -11,14 +11,14 @@ trait Application {
   def queueName: String
   def maxMessagesCount: Int
   def maxInstancesCount: Option[Int]
-  def serverName: String
+  def rmqServerName: String
 }
 
 object ApplicationFactory extends StrictLogging {
-  def tryCreate(rabbitMqClient: Client, name: String, serverName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None): Try[Application] = {
+  def tryCreate(rabbitMqClient: Client, name: String, rmqServerName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None): Try[Application] = {
     rabbitMqClient.queueExists(vhost, queueName) match {
       case Success(true) =>
-        Success(ApplicationImpl(name, serverName, vhost, queueName, maxMessagesCount, maxInstancesCount))
+        Success(ApplicationImpl(name, rmqServerName, vhost, queueName, maxMessagesCount, maxInstancesCount))
       case Failure(e) =>
         logger.warn(s"Unable to verify that '$queueName' for application '$name' exists. Ignoring this application configuration.", e)
         Failure(e)
@@ -28,5 +28,5 @@ object ApplicationFactory extends StrictLogging {
     }
   }
 
-  private case class ApplicationImpl(name: String, serverName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
+  private case class ApplicationImpl(name: String, rmqServerName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
 }
