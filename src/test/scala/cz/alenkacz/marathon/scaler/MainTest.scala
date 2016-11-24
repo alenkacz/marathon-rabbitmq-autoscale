@@ -73,6 +73,18 @@ class MainTest extends TestFixture with MockitoSugar {
     actual should be (false)
   }
 
+  it should "not throw exception for single rabbitmq server" in { _ =>
+    noException should be thrownBy Main.setupRabbitMqClients(ConfigFactory.load("application"))
+  }
+
+  it should "throw validation exception for multiple rmq servers without name" in { _ =>
+    an [InvalidConfigurationException] should be thrownBy Main.setupRabbitMqClients(ConfigFactory.load("multiple-rmq-no-name"))
+  }
+
+  it should "allow to have one rmq server without name" in { _ =>
+    noException should be thrownBy Main.setupRabbitMqClients(ConfigFactory.load("multiple-rmq-with-names"))
+  }
+
   def limitReached(millis: Long, duration: Duration) = System.currentTimeMillis() - millis > duration.toMillis
 
   def waitForMessages(b: () => Boolean, duration: Duration) = {

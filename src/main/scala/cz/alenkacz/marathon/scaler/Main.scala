@@ -2,15 +2,15 @@ package cz.alenkacz.marathon.scaler
 
 import java.time.Duration
 
-import com.typesafe.config.ConfigFactory
-
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.client.{Marathon, MarathonClient}
 import cz.alenkacz.marathon.scaler.MarathonProxy._
 import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import cz.alenkacz.marathon.scaler.ExtendedConfig._
-import collection.JavaConverters._
 
+import collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Success
 
 object Main extends StrictLogging {
@@ -38,11 +38,20 @@ object Main extends StrictLogging {
     })
   }
 
+  private def rabbitMqConfigValid(rabbitMqConfigs: Seq[Config]) = rabbitMqConfigs.size < 2 || rabbitMqConfigs.count(c => c.getOptionalString("name").isDefined) == (rabbitMqConfigs.size - 1) // only one config can be without name
+
+  def setupRabbitMqClients(config: Config): Map[String, Client] = {
+    val rabbitMqConfigs = config.getConfigList("rabbitMq").asScala
+    if (!rabbitMqConfigValid(rabbitMqConfigs)) {
+      throw new InvalidConfigurationException("RabbitMq configuration cannot contain multiple rabbitMq servers without a name specified")
+    }
+    rabbitMqConfigs.map(rmq => rmq.getOptionalString("name").getOrElse("") -> new Client(rmq.getString("httpApiEndpoint"), rmq.getString("username"), rmq.getString("password"))).toMap
+  }
+
   def main(args: Array[String]): Unit = {
     logger.debug("Loading application")
     val config = ConfigFactory.load()
-    val rabbitMqConfigs = config.getConfigList("rabbitMq")
-    val rmqClients = rabbitMqConfigs.asScala.map(rmq => rmq.getOptionalString("name").getOrElse("") -> new Client(rmq.getString("httpApiEndpoint"), rmq.getString("username"), rmq.getString("password"))).toMap
+    val rmqClients = setupRabbitMqClients(config)
     logger.debug("Connected to rabbitMq server")
     val marathonConfig = config.getConfig("marathon")
     val marathonClient = MarathonClient.getInstance(marathonConfig.getString("url"))
@@ -65,4 +74,6 @@ object Main extends StrictLogging {
     }
   }
 }
+
+class InvalidConfigurationException(message: String) extends Exception(message)
 
