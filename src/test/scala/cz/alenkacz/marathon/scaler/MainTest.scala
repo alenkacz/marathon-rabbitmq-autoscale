@@ -31,6 +31,16 @@ class MainTest extends TestFixture with MockitoSugar {
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
+  it should "scale for queue on second rmq instance" in { fixture =>
+    sendMessages(fixture.rmqClients("second").channel, "test", 15)
+    val marathonMock = mock[Marathon]
+    when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
+    waitForMessages(() => fixture.rmqClients("second").messageCount("/", "test").get == 15, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "second", "/", "test", 10)), fixture.rmqClients, marathonMock, app => false)
+
+    verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
+  }
+
 
   it should "call marathon when limit is reached for application which used non-default RabbitMQ" in { fixture =>
     sendMessages(fixture.rmqClients("second").channel, "test", 15)
