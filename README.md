@@ -25,7 +25,7 @@ See example configuration attached:
     }
   },
   "env": {
-    "JAVA_OPTS": "-DrabbitMq.username=user -DrabbitMq.password=password -DrabbitMq.httpApiEndpoint=https://rabbitmq.yourdomain.com:15671/api -Dmarathon.url=http://marathon.yourdomain.com/"
+    "JAVA_OPTS": "-DrabbitMq.0.username=user -DrabbitMq.0.password=password -DrabbitMq.0.httpApiEndpoint=https://rabbitmq.yourdomain.com:15671/api -Dmarathon.url=http://marathon.yourdomain.com/"
   }
 }
 ```
