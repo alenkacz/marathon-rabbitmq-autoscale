@@ -18,8 +18,8 @@ abstract class TestFixture extends org.scalatest.fixture.FlatSpec with Matchers 
   override protected def withFixture(test: OneArgTest): Outcome = {
     val fixture = FixtureParam(
       Map(
-        "" -> TestClient(rmqConnect(System.getenv("RABBITMQ_HOST"), Integer.parseInt(System.getenv("RABBITMQ_TCP_5672"))), s"http://${System.getenv("RABBITMQ_HOST")}:${System.getenv("RABBITMQ_TCP_15672")}/api", "guest", "guest"),
-        "second" -> TestClient(rmqConnect(System.getenv("RABBITMQ-SECOND_HOST"), Integer.parseInt(System.getenv("RABBITMQ-SECOND_TCP_5672"))),s"http://${System.getenv("RABBITMQ-SECOND_HOST")}:${System.getenv("RABBITMQ-SECOND_TCP_15672")}/api", "guest", "guest")
+        "" -> TestClient(rmqConnect(System.getenv("RABBITMQ_HOST"), Integer.parseInt(System.getenv("RABBITMQ_TCP_5672"))), s"http://${System.getenv("RABBITMQ_HOST")}:${System.getenv("RABBITMQ_TCP_15672")}/api/", "guest", "guest"),
+        "second" -> TestClient(rmqConnect(System.getenv("RABBITMQ-SECOND_HOST"), Integer.parseInt(System.getenv("RABBITMQ-SECOND_TCP_5672"))),s"http://${System.getenv("RABBITMQ-SECOND_HOST")}:${System.getenv("RABBITMQ-SECOND_TCP_15672")}/api/", "guest", "guest")
       ))
     fixture.rmqClients.values.foreach(c => c.prepareTopology())
     try super.withFixture(test.toNoArgTest(fixture))
