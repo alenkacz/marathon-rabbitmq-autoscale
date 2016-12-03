@@ -26,8 +26,8 @@ repositories {
 }
 
 ext {
-    scalaVersion = '2.11'
-    scalaLibraryVersion = '2.11.7'
+    scalaVersion = '2.12'
+    scalaLibraryVersion = '2.12.0'
 }
 
 dockerCompose {
