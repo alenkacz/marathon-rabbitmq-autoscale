@@ -61,12 +61,18 @@ object Main extends StrictLogging {
 
   private def rabbitMqConfigValid(rabbitMqConfigs: Seq[Config]) = rabbitMqConfigs.size < 2 || rabbitMqConfigs.count(c => c.getOptionalString("name").isDefined) == (rabbitMqConfigs.size - 1) // only one config can be without name
 
+  def normalizeHttpApiEndpoint(apiEndpointUrl: String): String = apiEndpointUrl match {
+    case u if u.endsWith("api/") => u
+    case u if u.endsWith("api") => s"$u/"
+    case u => u // probably invalid url but there is no easy way to fix it
+  }
+
   def setupRabbitMqClients(config: Config): Map[String, Client] = {
     val rabbitMqConfigs = config.getConfigList("rabbitMq").asScala
     if (!rabbitMqConfigValid(rabbitMqConfigs)) {
       throw new InvalidConfigurationException("RabbitMq configuration cannot contain multiple rabbitMq servers without a name specified")
     }
-    rabbitMqConfigs.map(rmq => rmq.getOptionalString("name").getOrElse("") -> new Client(rmq.getString("httpApiEndpoint"), rmq.getString("username"), rmq.getString("password"))).toMap
+    rabbitMqConfigs.map(rmq => rmq.getOptionalString("name").getOrElse("") -> new Client(normalizeHttpApiEndpoint(rmq.getString("httpApiEndpoint")), rmq.getString("username"), rmq.getString("password"))).toMap
   }
 
   def main(args: Array[String]): Unit = {
