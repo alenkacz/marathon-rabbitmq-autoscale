@@ -10,19 +10,28 @@ import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import cz.alenkacz.marathon.scaler.ExtendedConfig._
 
 import collection.JavaConverters._
-import scala.collection.mutable
 import scala.util.Success
 
 object Main extends StrictLogging {
   private def isOverLimit(rmqClient: Client, vhost: String, queueName: String, maxMessagesCount: Int): Boolean = {
     rmqClient.messageCount(vhost, queueName) match {
       case Success(count) =>
+        logger.info(s"Messages count: $count" )
         count > maxMessagesCount
       case _ => false
     }
   }
 
   def isCooledDown(app: Application, lastScaled: Map[String, Long], currentTime: Long, checkPeriod: Long, coolDown: Int): Boolean = currentTime < lastScaled.getOrElse(app.name, 0l) + (checkPeriod * coolDown)
+
+  def shouldBeScaledDown(client: Client, vhost: String, queueName: String, minInstancesCount: Option[Int]) = minInstancesCount match {
+    case Some(minInstances) => client.messageCount(vhost, queueName) match {
+      case Success(count) =>
+        count == 0
+      case _ => false
+    }
+    case None => false
+  }
 
   def checkAndScale(applications: Seq[Application], rmqClients: Map[String, Client], marathonClient: Marathon, isCooledDown: Application => Boolean): Unit = {
     applications.foreach(app => {
@@ -33,7 +42,19 @@ object Main extends StrictLogging {
         case (true,true) =>
           logger.debug(s"Application ${app.name} is over limit but is currently in cooldown period - not scaling")
         case (false, _) =>
-          logger.info(s"No need to scale ${app.name}. Queue message count is inside the limits.")
+          logger.debug(s"No need to scale ${app.name}. Queue message count is inside the limits.")
+      }
+    })
+    // scale down
+    applications.foreach(app => {
+      (shouldBeScaledDown(rmqClients(app.rmqServerName), app.vhost, app.queueName, app.minInstancesCount), isCooledDown(app)) match {
+        case (true, false) =>
+          logger.info(s"Application's ${app.name} queue '${app.queueName}' is empty, we can decrease number of instances")
+          scaleDown(marathonClient, app.name, app.minInstancesCount)
+        case (true,true) =>
+          logger.debug(s"Application ${app.name} is empty but is currently in cooldown period - not scaling")
+        case (false, _) =>
+          logger.debug(s"No need to scale down ${app.name}. Queue message count is not empty.")
       }
     })
   }

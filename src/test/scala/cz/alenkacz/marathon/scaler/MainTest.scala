@@ -9,8 +9,8 @@ import mesosphere.marathon.client.model.v2.{GetAppResponse, GetAppsResponse}
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatcher, ArgumentMatchers, Matchers, Mockito}
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
+import org.scalatest.mockito.MockitoSugar
 
 @RunWith(classOf[JUnitRunner])
 class MainTest extends TestFixture with MockitoSugar {
@@ -29,6 +29,17 @@ class MainTest extends TestFixture with MockitoSugar {
     Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)), fixture.rmqClients, marathonMock, app => false)
 
     verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
+  }
+
+  it should "call marathon when queue is empty and scaledown is enabled" in { fixture =>
+    val marathonMock = mock[Marathon]
+    val appResponse = nonEmptyAppResponse()
+    when(marathonMock.getApp("test")).thenReturn(appResponse)
+    fixture.rmqClients("").purgeQueue("/", "test")
+    waitForMessages(() => fixture.rmqClients("").messageCount("/", "test").get == 0, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10, minInstancesCount = Some(0))), fixture.rmqClients, marathonMock, app => false)
+
+    verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.argThat(new AppMatcher(0)), ArgumentMatchers.any())
   }
 
   it should "scale for queue on second rmq instance" in { fixture =>
@@ -121,5 +132,9 @@ class MainTest extends TestFixture with MockitoSugar {
     response
   }
 
-  case class TestApplication(name: String, rmqServerName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None) extends Application
+  case class TestApplication(name: String, rmqServerName: String, vhost: String, queueName: String, maxMessagesCount: Int, maxInstancesCount: Option[Int] = None, minInstancesCount: Option[Int] = None) extends Application
+
+  class AppMatcher(instancesCount: Int) extends ArgumentMatcher[mesosphere.marathon.client.model.v2.App] {
+    override def matches(argument: mesosphere.marathon.client.model.v2.App): Boolean = argument.getInstances.toInt == instancesCount
+  }
 }
