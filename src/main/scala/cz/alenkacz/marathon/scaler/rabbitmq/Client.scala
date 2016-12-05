@@ -25,5 +25,7 @@ class Client(apiUrl: String, username: String, password: String) {
     Try(client.getQueue(vhost, queueName).getTotalMessages)
   }
 
+  def purgeQueue(vhost: String, queueName: String): Unit = client.purgeQueue(vhost, queueName)
+
   case class Queue(messages: Int)
 }

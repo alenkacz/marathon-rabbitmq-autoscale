@@ -21,10 +21,25 @@ object MarathonProxy extends StrictLogging {
     }
   }
 
+  def scaleDown(marathonClient: Marathon, applicationName: String, minInstancesCount: Option[Int]): Unit = {
+    val applicationState = marathonClient.getApp(applicationName).getApp
+    val targetInstanceCount = Math.max(applicationState.getInstances - 1, minInstancesCount.getOrElse(Integer.MIN_VALUE))
+    targetInstanceCount match {
+      case newInstanceCount if targetInstanceCount != applicationState.getInstances =>
+        logger.info(s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be decreased to $targetInstanceCount")
+
+        applicationState.setInstances(targetInstanceCount)
+        marathonClient.updateApp(applicationName, applicationState, true)
+      case _ =>
+        logger.debug(s"Application already have target count of instances which is $targetInstanceCount")
+    }
+  }
+
   val QUEUE_LABEL_NAME = "AUTOSCALE_QUEUE"
   val VHOST_LABEL_NAME = "AUTOSCALE_VHOST"
   val MAX_MESSAGES_LABEL_NAME = "AUTOSCALE_MAXMESSAGES"
-  val MAXINSTANCES_LABEL_NAME = "AUTOSCALE_MAXINSTANCES"
+  val MAX_INSTANCES_LABEL_NAME = "AUTOSCALE_MAXINSTANCES"
+  val MIN_INSTANCES_LABEL_NAME = "AUTOSCALE_MININSTANCES"
   val RMQ_SERVER_LABEL_NAME = "AUTOSCALE_RMQSERVER"
 
   def findAppsWithAutoscaleLabels(marathonClient: Marathon, rabbitMqClients: Map[String, Client]): Seq[Application] = {
@@ -35,9 +50,10 @@ object MarathonProxy extends StrictLogging {
         val queueName = labels.find(_._1.equalsIgnoreCase(QUEUE_LABEL_NAME)).map(_._2.trim).get
         val vhostName = labels.find(_._1.equalsIgnoreCase(VHOST_LABEL_NAME)).map(_._2.trim).getOrElse("/")
         val maxMessagesCount = labels.find(_._1.equalsIgnoreCase(MAX_MESSAGES_LABEL_NAME)).map(_._2).get.toInt
-        val maxInstancesCount = labels.find(_._1.equalsIgnoreCase(MAXINSTANCES_LABEL_NAME)).map(_._2).map(_.toInt)
+        val maxInstancesCount = labels.find(_._1.equalsIgnoreCase(MAX_INSTANCES_LABEL_NAME)).map(_._2).map(_.toInt)
+        val minInstancesCount = labels.find(_._1.equalsIgnoreCase(MIN_INSTANCES_LABEL_NAME)).map(_._2).map(_.toInt)
         val serverName = labels.find(_._1.equalsIgnoreCase(RMQ_SERVER_LABEL_NAME)).map(_._2.trim).getOrElse("")
-        ApplicationFactory.tryCreate(rabbitMqClients(serverName), a.getId, serverName, vhostName, queueName, maxMessagesCount, maxInstancesCount)
+        ApplicationFactory.tryCreate(rabbitMqClients(serverName), a.getId, serverName, vhostName, queueName, maxMessagesCount, maxInstancesCount, minInstancesCount)
       }).filter(_.isSuccess).map(_.get)
 
     logger.info(s"Configured following apps via marathon labels: '${labelledApps.map(a => a).mkString(",")}'")

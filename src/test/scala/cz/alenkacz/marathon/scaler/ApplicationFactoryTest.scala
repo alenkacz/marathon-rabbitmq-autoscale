@@ -2,7 +2,7 @@ package cz.alenkacz.marathon.scaler
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 
 @RunWith(classOf[JUnitRunner])
 class ApplicationFactoryTest extends TestFixture with MockitoSugar {

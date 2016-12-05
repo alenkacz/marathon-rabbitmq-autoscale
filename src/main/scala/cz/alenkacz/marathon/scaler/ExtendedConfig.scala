@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
 object ExtendedConfig {
   def getApplicationConfigurationList(config: Config, rabbitMqClients: Map[String, Client]): Seq[Application] = {
     if (config.hasPath("applications")) {
-      config.getConfigList("applications").asScala.map(a => ApplicationFactory.tryCreate(rabbitMqClients(a.getOptionalString("rmqServerName").getOrElse("")), a.getString("name"), a.getOptionalString("rmqServerName").getOrElse(""), a.getOptionalString("vhost").getOrElse("/"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount"))).filter(_.isSuccess).map(_.get)
+      config.getConfigList("applications").asScala.map(a => ApplicationFactory.tryCreate(rabbitMqClients(a.getOptionalString("rmqServerName").getOrElse("")), a.getString("name"), a.getOptionalString("rmqServerName").getOrElse(""), a.getOptionalString("vhost").getOrElse("/"), a.getString("queue"), a.getInt("maxMessagesCount"), a.getOptionalInt("maxInstancesCount"), a.getOptionalInt("minInstancesCount"))).filter(_.isSuccess).map(_.get)
     } else {
       Seq.empty
     }
