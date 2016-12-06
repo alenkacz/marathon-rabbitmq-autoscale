@@ -82,6 +82,17 @@ class MainTest extends TestFixture with MockitoSugar {
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
+  it should "return list of scaled apps" in { fixture =>
+    sendMessages(fixture.rmqClients("second").channel, "test", 15)
+    val marathonMock = mock[Marathon]
+    val application = TestApplication("test", "second", "/", "test", 10)
+    when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
+    waitForMessages(() => fixture.rmqClients("second").messageCount("/", "test").get == 15, Duration.ofSeconds(5))
+    val actual = Main.checkAndScale(Array(application), fixture.rmqClients, marathonMock, app => false)
+
+    actual should be (Seq(application))
+  }
+
   it should "be cooled down" in { fixture =>
     val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> 1), 1000, 5000, 5)
 

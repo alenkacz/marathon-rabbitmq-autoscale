@@ -10,6 +10,7 @@ import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import cz.alenkacz.marathon.scaler.ExtendedConfig._
 
 import collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Success
 
 object Main extends StrictLogging {
@@ -33,30 +34,35 @@ object Main extends StrictLogging {
     case None => false
   }
 
-  def checkAndScale(applications: Seq[Application], rmqClients: Map[String, Client], marathonClient: Marathon, isCooledDown: Application => Boolean): Unit = {
-    applications.foreach(app => {
+  def checkAndScale(applications: Seq[Application], rmqClients: Map[String, Client], marathonClient: Marathon, isCooledDown: Application => Boolean): Seq[Application] = {
+    val scaledApplications = applications.map(app => { // scaleup
       (isOverLimit(rmqClients(app.rmqServerName), app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
         case (true, false) =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
+          Some(app)
         case (true,true) =>
           logger.debug(s"Application ${app.name} is over limit but is currently in cooldown period - not scaling")
+          None
         case (false, _) =>
           logger.debug(s"No need to scale ${app.name}. Queue message count is inside the limits.")
+          None
       }
-    })
-    // scale down
-    applications.foreach(app => {
+    }) ++ applications.map(app => { // scaledown
       (shouldBeScaledDown(rmqClients(app.rmqServerName), app.vhost, app.queueName, app.minInstancesCount), isCooledDown(app)) match {
         case (true, false) =>
           logger.info(s"Application's ${app.name} queue '${app.queueName}' is empty, we can decrease number of instances")
           scaleDown(marathonClient, app.name, app.minInstancesCount)
+          Some(app)
         case (true,true) =>
           logger.debug(s"Application ${app.name} is empty but is currently in cooldown period - not scaling")
+          None
         case (false, _) =>
           logger.debug(s"No need to scale down ${app.name}. Queue message count is not empty.")
+          None
       }
     })
+    scaledApplications.flatten.distinct
   }
 
   private def rabbitMqConfigValid(rabbitMqConfigs: Seq[Config]) = rabbitMqConfigs.size < 2 || rabbitMqConfigs.count(c => c.getOptionalString("name").isDefined) == (rabbitMqConfigs.size - 1) // only one config can be without name
@@ -94,7 +100,8 @@ object Main extends StrictLogging {
     while (true) {
       val startTime = System.currentTimeMillis()
       autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClients) else autoscaleLabelledApps
-      checkAndScale(autoscaleLabelledApps ++ applications, rmqClients, marathonClient, app => isCooledDown(app, lastScaled, System.currentTimeMillis(), checkIntervalMilliseconds, cooldown))
+      val scaledApplications = checkAndScale(autoscaleLabelledApps ++ applications, rmqClients, marathonClient, app => isCooledDown(app, lastScaled, System.currentTimeMillis(), checkIntervalMilliseconds, cooldown))
+      scaledApplications.foreach(a => lastScaled + (a.name -> startTime))
 
       Thread.sleep(checkIntervalMilliseconds)
       secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
