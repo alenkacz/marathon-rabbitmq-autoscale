@@ -1,6 +1,6 @@
 package cz.alenkacz.marathon.scaler
 
-import java.time.Duration
+import java.time.{Duration, Instant}
 
 import com.rabbitmq.client.Channel
 import com.typesafe.config.{Config, ConfigFactory}
@@ -94,13 +94,13 @@ class MainTest extends TestFixture with MockitoSugar {
   }
 
   it should "be cooled down" in { fixture =>
-    val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> 1), 1000, 5000, 5)
+    val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> Instant.ofEpochMilli(10000)), Instant.MIN, Duration.ofMillis(1), 5)
 
     actual should be (true)
   }
 
   it should "not be cooled down" in { fixture =>
-    val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> 1), 1000000, 5000, 5)
+    val actual = Main.isCooledDown(TestApplication("test", "", "/", "test", 10), Map("test" -> Instant.MIN), Instant.MAX, Duration.ofMillis(1), 5)
 
     actual should be (false)
   }

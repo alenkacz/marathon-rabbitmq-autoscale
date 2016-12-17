@@ -1,6 +1,7 @@
 package cz.alenkacz.marathon.scaler
 
-import java.time.Duration
+import java.time.temporal.TemporalUnit
+import java.time.{Duration, Instant}
 
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -23,7 +24,7 @@ object Main extends StrictLogging {
     }
   }
 
-  def isCooledDown(app: Application, lastScaled: Map[String, Long], currentTime: Long, checkPeriod: Long, coolDown: Int): Boolean = currentTime < lastScaled.getOrElse(app.name, 0l) + (checkPeriod * coolDown)
+  def isCooledDown(app: Application, lastScaled: Map[String, Instant], currentTime: Instant, checkPeriod: Duration, coolDown: Int): Boolean = currentTime.isBefore(lastScaled.getOrElse(app.name, Instant.MIN).plusMillis(checkPeriod.toMillis * coolDown))
 
   def shouldBeScaledDown(client: Client, vhost: String, queueName: String, minInstancesCount: Option[Int]) = minInstancesCount match {
     case Some(minInstances) => client.messageCount(vhost, queueName) match {
@@ -91,20 +92,20 @@ object Main extends StrictLogging {
     logger.debug("Connected to marathon server")
     val applications = getApplicationConfigurationList(config, rmqClients)
     logger.info(s"Loaded ${applications.length} applications")
-    val checkIntervalMilliseconds = config.getOptionalDuration("interval").getOrElse(Duration.ofSeconds(60)).toMillis
+    val checkInterval = config.getOptionalDuration("interval").getOrElse(Duration.ofSeconds(60))
     val cooldown = config.getOptionalInt("cooldown").getOrElse(5)
-    val lastScaled = Map.empty[String, Long]
+    val lastScaled = Map.empty[String, Instant]
 
-    val secondsToCheckLabels = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
+    val checkLabelsPeriod = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
     var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClients)
     while (true) {
-      val startTime = System.currentTimeMillis()
-      autoscaleLabelledApps = if (secondsToCheckLabels.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClients) else autoscaleLabelledApps
-      val scaledApplications = checkAndScale(autoscaleLabelledApps ++ applications, rmqClients, marathonClient, app => isCooledDown(app, lastScaled, System.currentTimeMillis(), checkIntervalMilliseconds, cooldown))
+      val startTime = Instant.now()
+      autoscaleLabelledApps = if (checkLabelsPeriod.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClients) else autoscaleLabelledApps
+      val scaledApplications = checkAndScale(autoscaleLabelledApps ++ applications, rmqClients, marathonClient, app => isCooledDown(app, lastScaled, Instant.now(), checkInterval, cooldown))
       scaledApplications.foreach(a => lastScaled + (a.name -> startTime))
 
-      Thread.sleep(checkIntervalMilliseconds)
-      secondsToCheckLabels.minus(Duration.ofMillis(System.currentTimeMillis() - startTime))
+      Thread.sleep(checkInterval.toMillis)
+      checkLabelsPeriod.minus(Duration.between(Instant.now(), startTime).abs())
     }
   }
 }
