@@ -72,7 +72,17 @@ class MainTest extends TestFixture with MockitoSugar {
     verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
   }
 
-  it should "cool not scale up when cooled down" in { fixture =>
+  it should "not scale to less than minInstancesCount" in { fixture =>
+    val marathonMock = mock[Marathon]
+    when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
+    fixture.rmqClients("").purgeQueue("/", "test")
+    waitForMessages(() => fixture.rmqClients("").messageCount("/", "test").get == 0, Duration.ofSeconds(5))
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10, minInstancesCount = Some(1))), fixture.rmqClients, marathonMock, app => false)
+
+    verify(marathonMock, never()).updateApp(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())
+  }
+
+  it should "should not scale up when cooled down" in { fixture =>
     sendMessages(fixture.rmqClients("").channel, "test", 15)
     val marathonMock = mock[Marathon]
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())

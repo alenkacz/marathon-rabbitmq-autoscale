@@ -8,11 +8,11 @@ import collection.JavaConverters._
 
 object MarathonProxy extends StrictLogging {
   def scaleUp(marathonClient: Marathon, applicationName: String, maxInstancesCount: Option[Int]): Unit = {
-    scale(marathonClient, applicationName, maxInstancesCount, None, (applicationState, _, maxInstancesCount) => Math.min(applicationState.getInstances + 1, maxInstancesCount.getOrElse(Integer.MAX_VALUE)))
+    scale(marathonClient, applicationName, maxInstancesCount, None, (applicationState, maxInstancesCount, _) => Math.min(applicationState.getInstances + 1, maxInstancesCount.getOrElse(Integer.MIN_VALUE)))
   }
 
   def scaleDown(marathonClient: Marathon, applicationName: String, minInstancesCount: Option[Int]): Unit = {
-    scale(marathonClient, applicationName, None, minInstancesCount, (applicationState, minInstancesCount, _) => Math.max(applicationState.getInstances - 1, minInstancesCount.getOrElse(Integer.MIN_VALUE)))
+    scale(marathonClient, applicationName, None, minInstancesCount, (applicationState, _, minInstancesCount) => Math.max(applicationState.getInstances - 1, minInstancesCount.getOrElse(Integer.MAX_VALUE)))
   }
 
   private def scale(marathonClient: Marathon, applicationName: String, maxInstancesCount: Option[Int], minInstancesCount: Option[Int], targetInstancesCount: (mesosphere.marathon.client.model.v2.App, Option[Int], Option[Int]) => Int): Unit = {
