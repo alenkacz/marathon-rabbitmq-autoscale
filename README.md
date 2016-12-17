@@ -1,7 +1,9 @@
 # marathon-rabbitmq-autoscale
 [![Build Status](https://travis-ci.org/alenkacz/marathon-rabbitmq-autoscale.svg?branch=master)](https://travis-ci.org/alenkacz/marathon-rabbitmq-autoscale)
 
-Adds possibility to automatically scale applications running in Marathon that are consuming messages from RabbitMQ. If the current number of instances starts to fall behind the number of messages that is piling up in the queues, this application will take care of increasing instances to catch up the demand.
+Adds possibility to automatically scale applications running in Marathon that are consuming messages from RabbitMQ. If the current number of instances starts to fall behind the number of messages that is piling up in the queues, this application will take care of increasing instances to catch up the demand. It also has the capability of scale the application down when there are no more messages left.
+
+Number of instances of configured application will be increased by 1 every time treshold of *AUTOSCALE_MAXMESSAGES* is reached until *AUTOSCALE_MAXINSTANCES* is reached. In case *AUTOSCALE_MAXINSTANCES* is specified, app will be also scaled down every time the number of messages is 0. To avoid app being scaled up and down all the time, there is a cooldown period that can be specified when starting up the autoscaler container. By default the cooldown period is 5 minutes.
 
 Marathon-rabbitmq-autoscale (autoscaler) is distributed as docker image available on [Docker Hub](https://hub.docker.com/r/alenkacz/marathon-rabbitmq-autoscale/).
 
@@ -46,6 +48,7 @@ After you deploy your app to Marathon, you have to add these labels:
 - *AUTOSCALE_VHOST* (optional) - if the queue is in a different vhost than the default one "/" you have to specify it
 - *AUTOSCALE_MAXMESSAGES* - when this message count is hit, number of instances of this app will be increased
 - *AUTOSCALE_MAXINSTANCES* (optional) - maximum number of instances after which the app cannot be autoscaled
+- *AUTOSCALE_MININSTANCES* (optional) - by setting this property, you are enabling the scale down feature that will scale down to the count of instances specified
 - *AUTOSCALE_RMQSERVER* (optional) - the RabbitMQ server name from the configuration. This allows to work with multiple RMQ servers
 
 #### How to add label to a Marathon application
