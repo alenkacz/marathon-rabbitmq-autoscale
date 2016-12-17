@@ -8,30 +8,24 @@ import collection.JavaConverters._
 
 object MarathonProxy extends StrictLogging {
   def scaleUp(marathonClient: Marathon, applicationName: String, maxInstancesCount: Option[Int]): Unit = {
-    val applicationState = marathonClient.getApp(applicationName).getApp
-    val targetInstanceCount = Math.min(applicationState.getInstances + 1, maxInstancesCount.getOrElse(Integer.MAX_VALUE))
-    targetInstanceCount match {
-      case newInstanceCount if targetInstanceCount != applicationState.getInstances =>
-        logger.info(s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be increased to $targetInstanceCount")
-
-        applicationState.setInstances(targetInstanceCount)
-        marathonClient.updateApp(applicationName, applicationState, true)
-      case _ =>
-        logger.debug(s"Application already have target count of instances which is $targetInstanceCount")
-    }
+    scale(marathonClient, applicationName, maxInstancesCount, None, (applicationState, _, maxInstancesCount) => Math.min(applicationState.getInstances + 1, maxInstancesCount.getOrElse(Integer.MAX_VALUE)))
   }
 
   def scaleDown(marathonClient: Marathon, applicationName: String, minInstancesCount: Option[Int]): Unit = {
-    val applicationState = marathonClient.getApp(applicationName).getApp
-    val targetInstanceCount = Math.max(applicationState.getInstances - 1, minInstancesCount.getOrElse(Integer.MIN_VALUE))
-    targetInstanceCount match {
-      case newInstanceCount if targetInstanceCount != applicationState.getInstances =>
-        logger.info(s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be decreased to $targetInstanceCount")
+    scale(marathonClient, applicationName, None, minInstancesCount, (applicationState, minInstancesCount, _) => Math.max(applicationState.getInstances - 1, minInstancesCount.getOrElse(Integer.MIN_VALUE)))
+  }
 
-        applicationState.setInstances(targetInstanceCount)
+  private def scale(marathonClient: Marathon, applicationName: String, maxInstancesCount: Option[Int], minInstancesCount: Option[Int], targetInstancesCount: (mesosphere.marathon.client.model.v2.App, Option[Int], Option[Int]) => Int): Unit = {
+    val applicationState = marathonClient.getApp(applicationName).getApp
+    val targetCount = targetInstancesCount(applicationState, maxInstancesCount, minInstancesCount)
+    targetCount match {
+      case newInstanceCount if targetCount != applicationState.getInstances =>
+        logger.info(s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be adjusted to $targetCount")
+
+        applicationState.setInstances(targetCount)
         marathonClient.updateApp(applicationName, applicationState, true)
       case _ =>
-        logger.debug(s"Application already have target count of instances which is $targetInstanceCount")
+        logger.debug(s"Application already have target count of instances which is $targetCount")
     }
   }
 
