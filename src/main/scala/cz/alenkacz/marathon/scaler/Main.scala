@@ -18,7 +18,7 @@ object Main extends StrictLogging {
   private def isOverLimit(rmqClient: Client, vhost: String, queueName: String, maxMessagesCount: Int): Boolean = {
     rmqClient.messageCount(vhost, queueName) match {
       case Success(count) =>
-        logger.info(s"Messages count: $count" )
+        logger.debug(s"$queueName messages count: $count" )
         count > maxMessagesCount
       case _ => false
     }
