@@ -94,7 +94,7 @@ object Main extends StrictLogging {
     logger.info(s"Loaded ${applications.length} applications")
     val checkInterval = config.getOptionalDuration("interval").getOrElse(Duration.ofSeconds(60))
     val cooldown = config.getOptionalInt("cooldown").getOrElse(5)
-    val lastScaled = Map.empty[String, Instant]
+    var lastScaled = Map.empty[String, Instant]
 
     val checkLabelsPeriod = marathonConfig.getOptionalDuration("labelsCheckPeriod").getOrElse(Duration.ofMinutes(1))
     var autoscaleLabelledApps = findAppsWithAutoscaleLabels(marathonClient, rmqClients)
@@ -102,7 +102,7 @@ object Main extends StrictLogging {
       val startTime = Instant.now()
       autoscaleLabelledApps = if (checkLabelsPeriod.getSeconds <= 0) findAppsWithAutoscaleLabels(marathonClient, rmqClients) else autoscaleLabelledApps
       val scaledApplications = checkAndScale(autoscaleLabelledApps ++ applications, rmqClients, marathonClient, app => isCooledDown(app, lastScaled, Instant.now(), checkInterval, cooldown))
-      scaledApplications.foreach(a => lastScaled + (a.name -> startTime))
+      scaledApplications.foreach(a => lastScaled = lastScaled + (a.name -> startTime))
 
       Thread.sleep(checkInterval.toMillis)
       checkLabelsPeriod.minus(Duration.between(Instant.now(), startTime).abs())

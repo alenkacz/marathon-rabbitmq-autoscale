@@ -25,7 +25,7 @@ object MarathonProxy extends StrictLogging {
         applicationState.setInstances(targetCount)
         marathonClient.updateApp(applicationName, applicationState, true)
       case _ =>
-        logger.debug(s"Application already have target count of instances which is $targetCount")
+        logger.info(s"Application already have target (min/max) count of instances which is $targetCount")
     }
   }
 
