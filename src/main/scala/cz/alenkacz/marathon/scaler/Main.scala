@@ -39,7 +39,7 @@ object Main extends StrictLogging {
     val scaledApplications = applications.map(app => { // scaleup
       (isOverLimit(rmqClients(app.rmqServerName), app.vhost, app.queueName, app.maxMessagesCount), isCooledDown(app)) match {
         case (true, false) =>
-          logger.info(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
+          logger.debug(s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
           Some(app)
         case (true,true) =>
@@ -52,7 +52,7 @@ object Main extends StrictLogging {
     }) ++ applications.map(app => { // scaledown
       (shouldBeScaledDown(rmqClients(app.rmqServerName), app.vhost, app.queueName, app.minInstancesCount), isCooledDown(app)) match {
         case (true, false) =>
-          logger.info(s"Application's ${app.name} queue '${app.queueName}' is empty, we can decrease number of instances")
+          logger.debug(s"Application's ${app.name} queue '${app.queueName}' is empty, we can decrease number of instances")
           scaleDown(marathonClient, app.name, app.minInstancesCount)
           Some(app)
         case (true,true) =>
