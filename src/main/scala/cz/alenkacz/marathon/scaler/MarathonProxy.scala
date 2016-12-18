@@ -38,7 +38,7 @@ object MarathonProxy extends StrictLogging {
 
   def findAppsWithAutoscaleLabels(marathonClient: Marathon, rabbitMqClients: Map[String, Client]): Seq[Application] = {
     val labelledApps = marathonClient.getApps.getApps.asScala
-      .filter(a => a.getLabels != null && a.getLabels.asScala.exists(p => p._1.equalsIgnoreCase(QUEUE_LABEL_NAME) && p._1.equalsIgnoreCase(MAX_MESSAGES_LABEL_NAME)))
+      .filter(a => a.getLabels != null && a.getLabels.asScala.exists(p => p._1.equalsIgnoreCase(QUEUE_LABEL_NAME)) && a.getLabels.asScala.exists(p => p._1.equalsIgnoreCase(MAX_MESSAGES_LABEL_NAME)))
       .map(a => {
         val labels = a.getLabels.asScala
         val queueName = labels.find(_._1.equalsIgnoreCase(QUEUE_LABEL_NAME)).map(_._2.trim).get
