@@ -5,7 +5,7 @@ buildscript {
     dependencies {
         classpath 'com.avast.gradle:docker-compose-gradle-plugin:0.3.11'
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
-        classpath 'cz.alenkacz:gradle-scalafmt:1.0.1'
+        classpath 'cz.alenkacz:gradle-scalafmt:1.3.5'
     }
 }
 
