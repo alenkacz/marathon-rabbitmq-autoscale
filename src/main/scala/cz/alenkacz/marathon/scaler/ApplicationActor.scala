@@ -9,9 +9,11 @@ import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.actor._
 import akka.util.Timeout
-import cz.alenkacz.marathon.scaler.MarathonApiActor.MarathonScaleUp
+import com.typesafe.scalalogging.StrictLogging
+import cz.alenkacz.marathon.scaler.Main.logger
+import cz.alenkacz.marathon.scaler.MarathonApiActor._
 
-class ApplicationActor(checkPeriod: FiniteDuration, rmqActor: ActorRef, marathonActor: ActorRef, application: Application) extends Actor with ActorLogging {
+class ApplicationActor(checkPeriod: FiniteDuration, rmqActor: ActorRef, marathonActor: ActorRef, app: Application) extends Actor with ActorLogging with StrictLogging {
   import context.dispatcher
   val tick =
     context.system.scheduler.schedule(500 millis, checkPeriod, self, CheckScaleStatus)
@@ -19,16 +21,36 @@ class ApplicationActor(checkPeriod: FiniteDuration, rmqActor: ActorRef, marathon
 
   override def receive: Receive = {
     case CheckScaleStatus =>
-      (rmqActor ? MessageCountRequest(application.vhost, application.queueName)).mapTo[MessageCountResponse]
-        .map(c => c.count > application.maxMessagesCount)
-        .filter(c => c)
-        .foreach(c => self ! ScaleUp)
+      (rmqActor ? MessageCountRequest(app.vhost, app.queueName)).mapTo[MessageCountResponse]
+        .map(c => c.count)
+        .map(scaleDirection)
+        .foreach {
+          case Up =>
+            logger.debug(
+              s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
+            self ! ScaleUp
+          case Down =>
+            logger.debug(s"Application's ${app.name} queue '${app.queueName}' is empty, we can decrease number of instances")
+            self ! ScaleDown
+          case None =>
+            logger.debug(s"No need to scale ${app.name}. Queue message count is inside the limits.")
+        }
     case ScaleUp =>
-      marathonActor ! MarathonScaleUp(application.name, application.maxInstancesCount)
+      marathonActor ! MarathonScaleUp(app.name, app.maxInstancesCount)
       // TODO add instances count, publish this after message from marathon client with confirmation is received
-      context.system.eventStream.publish(ScaledUp(application))
+      context.system.eventStream.publish(ScaledUp(app))
     case ScaleDown =>
-      // TODO
+      marathonActor ! MarathonScaleDown(app.name, app.minInstancesCount)
+      // TODO add instances count, publish this after message from marathon client with confirmation is received
+      context.system.eventStream.publish(ScaledDown(app))
+  }
+
+  private def scaleDirection(messageCount: Long): ScaleDirection = {
+    messageCount match {
+      case _ if messageCount > app.maxMessagesCount => Up
+      case _ if messageCount == 0 && app.minInstancesCount.isDefined => Down
+      case _ => None
+    }
   }
 }
 
@@ -38,5 +60,11 @@ object ApplicationActor {
   case object ScaleDown
 
   sealed trait ApplicationEvent
-  case class ScaledUp(application: Application)
+  case class ScaledUp(application: Application) extends ApplicationEvent
+  case class ScaledDown(application: Application) extends ApplicationEvent
+
+  sealed trait ScaleDirection
+  case object Up extends ScaleDirection
+  case object Down extends ScaleDirection
+  case object None extends ScaleDirection
 }
