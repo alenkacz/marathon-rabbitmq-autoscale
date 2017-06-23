@@ -251,15 +251,6 @@ class MainTest extends TestFixture with MockitoSugar {
     response
   }
 
-  case class TestApplication(name: String,
-                             rmqServerName: String,
-                             vhost: String,
-                             queueName: String,
-                             maxMessagesCount: Int,
-                             maxInstancesCount: Option[Int] = None,
-                             minInstancesCount: Option[Int] = None)
-      extends Application
-
   class AppMatcher(instancesCount: Int)
       extends ArgumentMatcher[mesosphere.marathon.client.model.v2.App] {
     override def matches(
@@ -267,3 +258,12 @@ class MainTest extends TestFixture with MockitoSugar {
       argument.getInstances.toInt == instancesCount
   }
 }
+
+case class TestApplication(name: String,
+                           rmqServerName: String,
+                           vhost: String,
+                           queueName: String,
+                           maxMessagesCount: Int,
+                           maxInstancesCount: Option[Int] = None,
+                           minInstancesCount: Option[Int] = None)
+  extends Application

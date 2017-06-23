@@ -13,9 +13,7 @@ object MarathonProxy extends StrictLogging {
     scale(
       marathonClient,
       applicationName,
-      maxInstancesCount,
-      None,
-      (applicationState, maxInstancesCount, _) =>
+      (applicationState) =>
         Math.min(applicationState.getInstances + 1,
                  maxInstancesCount.getOrElse(Integer.MIN_VALUE))
     )
@@ -27,9 +25,7 @@ object MarathonProxy extends StrictLogging {
     scale(
       marathonClient,
       applicationName,
-      None,
-      minInstancesCount,
-      (applicationState, _, minInstancesCount) =>
+      (applicationState) =>
         Math.max(applicationState.getInstances - 1,
                  minInstancesCount.getOrElse(Integer.MAX_VALUE))
     )
@@ -38,16 +34,11 @@ object MarathonProxy extends StrictLogging {
   private def scale(
       marathonClient: Marathon,
       applicationName: String,
-      maxInstancesCount: Option[Int],
-      minInstancesCount: Option[Int],
-      targetInstancesCount: (mesosphere.marathon.client.model.v2.App,
-                             Option[Int], Option[Int]) => Int): Unit = {
+      targetInstancesCount: (mesosphere.marathon.client.model.v2.App) => Int): Unit = {
     val applicationState = marathonClient.getApp(applicationName).getApp
-    val targetCount = targetInstancesCount(applicationState,
-                                           maxInstancesCount,
-                                           minInstancesCount)
+    val targetCount = targetInstancesCount(applicationState)
     targetCount match {
-      case newInstanceCount if targetCount != applicationState.getInstances =>
+      case _ if targetCount != applicationState.getInstances =>
         logger.info(
           s"Current instances count of application $applicationName is ${applicationState.getInstances} and will be adjusted to $targetCount")
 
