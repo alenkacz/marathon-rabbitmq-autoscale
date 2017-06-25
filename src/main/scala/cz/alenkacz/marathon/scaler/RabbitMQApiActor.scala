@@ -7,7 +7,10 @@ import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class RabbitMQApiActor(client: Client)(implicit val executionContext: ExecutionContext) extends Actor with ActorLogging {
+class RabbitMQApiActor(client: Client)(
+    implicit val executionContext: ExecutionContext)
+    extends Actor
+    with ActorLogging {
   override def receive: Receive = {
     case MessageCountRequest(vhost, queueName) =>
       Future {
