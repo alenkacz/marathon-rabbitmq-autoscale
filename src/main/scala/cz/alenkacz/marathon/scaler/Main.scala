@@ -144,7 +144,7 @@ object Main extends StrictLogging {
     val cooldown = config.getOptionalInt("cooldown").getOrElse(5)
     var lastScaled = Map.empty[String, Instant]
 
-    val checkLabelsPeriod = marathonConfig
+    var checkLabelsPeriod = marathonConfig
       .getOptionalDuration("labelsCheckPeriod")
       .getOrElse(Duration.ofMinutes(1))
     var autoscaleLabelledApps =
@@ -169,7 +169,7 @@ object Main extends StrictLogging {
         lastScaled = lastScaled + (a.name -> startTime))
 
       Thread.sleep(checkInterval.toMillis)
-      checkLabelsPeriod.minus(Duration.between(Instant.now(), startTime).abs())
+      checkLabelsPeriod = checkLabelsPeriod.minus(Duration.between(Instant.now(), startTime).abs())
     }
   }
 }
