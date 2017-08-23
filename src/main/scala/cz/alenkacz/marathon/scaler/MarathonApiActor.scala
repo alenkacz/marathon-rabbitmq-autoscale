@@ -2,11 +2,12 @@ package cz.alenkacz.marathon.scaler
 
 import akka.actor.{Actor, ActorLogging}
 import cz.alenkacz.marathon.scaler.MarathonApiActor._
+import cz.alenkacz.marathon.scaler.rabbitmq.Client
 import mesosphere.marathon.client.Marathon
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MarathonApiActor(marathonClient: Marathon)(
+class MarathonApiActor(marathonClient: Marathon, rabbitMqClients: Map[String, Client])(
     implicit val executionContext: ExecutionContext)
     extends Actor
     with ActorLogging {
@@ -19,6 +20,10 @@ class MarathonApiActor(marathonClient: Marathon)(
       Future {
         MarathonProxy.scaleDown(marathonClient, appName, minInstancesCount)
       }
+    case FindAutoscaleApps =>
+      Future {
+        sender ! MarathonProxy.findAppsWithAutoscaleLabels(marathonClient, rabbitMqClients)
+      }
   }
 }
 
@@ -30,4 +35,6 @@ object MarathonApiActor {
   case class MarathonScaleDown(applicationName: String,
                                minInstancesCount: Option[Int] = None)
       extends ApiMessage
+  case object FindAutoscaleApps extends ApiMessage
+  case class AutoscaleAppsResponse(apps: Seq[Application]) extends ApiMessage
 }
