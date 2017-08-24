@@ -21,7 +21,7 @@ object Main extends StrictLogging {
                           maxMessagesCount: Int): Boolean = {
     rmqClient.messageCount(vhost, queueName) match {
       case Success(count) =>
-        logger.debug(s"$queueName messages count: $count")
+        logger.info(s"$queueName messages count: $count")
         count > maxMessagesCount
       case _ => false
     }
@@ -62,16 +62,16 @@ object Main extends StrictLogging {
                    app.maxMessagesCount),
        isCooledDown(app)) match {
         case (true, false) =>
-          logger.debug(
+          logger.info(
             s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
           scaleUp(marathonClient, app.name, app.maxInstancesCount)
           Some(app)
         case (true, true) =>
-          logger.debug(
+          logger.info(
             s"Application ${app.name} is over limit but is currently in cooldown period - not scaling")
           None
         case (false, _) =>
-          logger.debug(
+          logger.info(
             s"No need to scale ${app.name}. Queue message count is inside the limits.")
           None
       }
@@ -169,7 +169,8 @@ object Main extends StrictLogging {
         lastScaled = lastScaled + (a.name -> startTime))
 
       Thread.sleep(checkInterval.toMillis)
-      checkLabelsPeriod = checkLabelsPeriod.minus(Duration.between(Instant.now(), startTime).abs())
+      checkLabelsPeriod = checkLabelsPeriod.minus(
+        Duration.between(Instant.now(), startTime).abs())
     }
   }
 }
