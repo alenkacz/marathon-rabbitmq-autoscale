@@ -32,7 +32,7 @@ class MainTest extends TestFixture with MockitoSugar {
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(
       () => fixture.rmqClients("").messageCount("/", "test").get == 15,
-      Duration.ofSeconds(5))
+      Duration.ofSeconds(10))
     Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)),
                        fixture.rmqClients,
                        marathonMock,
@@ -51,7 +51,7 @@ class MainTest extends TestFixture with MockitoSugar {
       fixture.rmqClients("").purgeQueue("/", "test")
       waitForMessages(
         () => fixture.rmqClients("").messageCount("/", "test").get == 0,
-        Duration.ofSeconds(5))
+        Duration.ofSeconds(10))
       Main.checkAndScale(Array(
                            TestApplication("test",
                                            "",
@@ -75,7 +75,7 @@ class MainTest extends TestFixture with MockitoSugar {
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(
       () => fixture.rmqClients("second").messageCount("/", "test").get == 15,
-      Duration.ofSeconds(5))
+      Duration.ofSeconds(10))
     Main.checkAndScale(
       Array(TestApplication("test", "second", "/", "test", 10)),
       fixture.rmqClients,
@@ -94,7 +94,7 @@ class MainTest extends TestFixture with MockitoSugar {
       when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
       waitForMessages(
         () => fixture.rmqClients("second").messageCount("/", "test").get == 15,
-        Duration.ofSeconds(5))
+        Duration.ofSeconds(10))
       Main.checkAndScale(
         Array(TestApplication("test", "second", "/", "test", 10)),
         fixture.rmqClients,
@@ -127,7 +127,7 @@ class MainTest extends TestFixture with MockitoSugar {
     fixture.rmqClients("").purgeQueue("/", "test")
     waitForMessages(
       () => fixture.rmqClients("").messageCount("/", "test").get == 0,
-      Duration.ofSeconds(5))
+      Duration.ofSeconds(10))
     Main.checkAndScale(Array(
                          TestApplication("test",
                                          "",
@@ -150,7 +150,7 @@ class MainTest extends TestFixture with MockitoSugar {
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(
       () => fixture.rmqClients("").messageCount("/", "test").get == 15,
-      Duration.ofSeconds(5))
+      Duration.ofSeconds(10))
     Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)),
                        fixture.rmqClients,
                        marathonMock,
@@ -168,7 +168,7 @@ class MainTest extends TestFixture with MockitoSugar {
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(
       () => fixture.rmqClients("second").messageCount("/", "test").get == 15,
-      Duration.ofSeconds(5))
+      Duration.ofSeconds(10))
     val actual = Main.checkAndScale(Array(application),
                                     fixture.rmqClients,
                                     marathonMock,
