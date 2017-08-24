@@ -4,16 +4,12 @@ import java.net.URL
 import java.security.cert.X509Certificate
 
 import com.rabbitmq.http.client.{Client => HttpClient}
-import org.apache.http.conn.ssl.{
-  SSLConnectionSocketFactory,
-  SSLContextBuilder,
-  SSLSocketFactory,
-  TrustStrategy
-}
+import com.typesafe.scalalogging.StrictLogging
+import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContextBuilder, SSLSocketFactory, TrustStrategy}
 
 import scala.util.{Failure, Success, Try}
 
-class Client(apiUrl: String, username: String, password: String) {
+class Client(apiUrl: String, username: String, password: String) extends StrictLogging {
   lazy val trustAllSslContext = new SSLContextBuilder()
     .loadTrustMaterial(null, new TrustStrategy() {
       override def isTrusted(chain: Array[X509Certificate],
@@ -31,7 +27,9 @@ class Client(apiUrl: String, username: String, password: String) {
   }
 
   def messageCount(vhost: String, queueName: String): Try[Long] = {
-    Try(client.getQueue(vhost, queueName).getTotalMessages)
+    val count = client.getQueue(vhost, queueName).getTotalMessages
+    logger.info(s"Queue.messageCount returned $count")
+    Try(count)
   }
 
   def purgeQueue(vhost: String, queueName: String): Unit =

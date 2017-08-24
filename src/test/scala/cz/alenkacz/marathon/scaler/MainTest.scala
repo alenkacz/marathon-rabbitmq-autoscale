@@ -220,6 +220,7 @@ class MainTest extends TestFixture with MockitoSugar {
 
   def waitForMessages(b: () => Boolean, duration: Duration) = {
     val millis = System.currentTimeMillis()
+    println("Waiting for messages count")
     while (!b() && !limitReached(millis, duration)) {}
   }
 
