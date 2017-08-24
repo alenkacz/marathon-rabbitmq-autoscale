@@ -5,11 +5,17 @@ import java.security.cert.X509Certificate
 
 import com.rabbitmq.http.client.{Client => HttpClient}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContextBuilder, SSLSocketFactory, TrustStrategy}
+import org.apache.http.conn.ssl.{
+  SSLConnectionSocketFactory,
+  SSLContextBuilder,
+  SSLSocketFactory,
+  TrustStrategy
+}
 
 import scala.util.{Failure, Success, Try}
 
-class Client(apiUrl: String, username: String, password: String) extends StrictLogging {
+class Client(apiUrl: String, username: String, password: String)
+    extends StrictLogging {
   lazy val trustAllSslContext = new SSLContextBuilder()
     .loadTrustMaterial(null, new TrustStrategy() {
       override def isTrusted(chain: Array[X509Certificate],

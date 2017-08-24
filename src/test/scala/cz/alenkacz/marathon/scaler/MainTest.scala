@@ -32,7 +32,7 @@ class MainTest extends TestFixture with MockitoSugar {
     when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
     waitForMessages(
       () => fixture.rmqClients("").messageCount("/", "test").get == 15,
-      Duration.ofSeconds(5))
+      Duration.ofSeconds(10))
     Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10)),
                        fixture.rmqClients,
                        marathonMock,
