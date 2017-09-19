@@ -169,7 +169,8 @@ object Main extends StrictLogging {
         lastScaled = lastScaled + (a.name -> startTime))
 
       Thread.sleep(checkInterval.toMillis)
-      checkLabelsPeriod = checkLabelsPeriod.minus(Duration.between(Instant.now(), startTime).abs())
+      checkLabelsPeriod = checkLabelsPeriod.minus(
+        Duration.between(Instant.now(), startTime).abs())
     }
   }
 }

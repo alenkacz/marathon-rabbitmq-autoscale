@@ -7,7 +7,7 @@ import org.mockito.Mockito._
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
 
-import collection.JavaConversions._
+import collection.JavaConverters._
 
 @RunWith(classOf[JUnitRunner])
 class MarathonProxyTest extends TestFixture with MockitoSugar {
@@ -49,7 +49,7 @@ class MarathonProxyTest extends TestFixture with MockitoSugar {
   private def appWithLabel(appName: String,
                            queueName: String = "test"): GetAppsResponse = {
     val response = new GetAppsResponse
-    val app = new mesosphere.marathon.client.model.v2.App
+    val app = new mesosphere.marathon.client.model.v2.VersionedApp
     app.setId(appName)
     app.setLabels(
       Map(
@@ -57,16 +57,16 @@ class MarathonProxyTest extends TestFixture with MockitoSugar {
         MarathonProxy.MAX_MESSAGES_LABEL_NAME -> "10",
         MarathonProxy.MAX_INSTANCES_LABEL_NAME -> "5",
         MarathonProxy.MIN_INSTANCES_LABEL_NAME -> "0"
-      ))
-    response.setApps(List(app))
+      ).asJava)
+    response.setApps(List(app).asJava)
     response
   }
 
   private def appWithoutLabel(appName: String): GetAppsResponse = {
     val response = new GetAppsResponse
-    val app = new mesosphere.marathon.client.model.v2.App
+    val app = new mesosphere.marathon.client.model.v2.VersionedApp
     app.setId(appName)
-    response.setApps(List(app))
+    response.setApps(List(app).asJava)
     response
   }
 }

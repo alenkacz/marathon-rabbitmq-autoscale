@@ -35,13 +35,14 @@ object MarathonProxy extends StrictLogging {
     )
   }
 
-  private def scale(
-      marathonClient: Marathon,
-      applicationName: String,
-      maxInstancesCount: Option[Int],
-      minInstancesCount: Option[Int],
-      targetInstancesCount: (mesosphere.marathon.client.model.v2.App,
-                             Option[Int], Option[Int]) => Int): Unit = {
+  private def scale(marathonClient: Marathon,
+                    applicationName: String,
+                    maxInstancesCount: Option[Int],
+                    minInstancesCount: Option[Int],
+                    targetInstancesCount: (
+                        mesosphere.marathon.client.model.v2.App,
+                        Option[Int],
+                        Option[Int]) => Int): Unit = {
     val applicationState = marathonClient.getApp(applicationName).getApp
     val targetCount = targetInstancesCount(applicationState,
                                            maxInstancesCount,
