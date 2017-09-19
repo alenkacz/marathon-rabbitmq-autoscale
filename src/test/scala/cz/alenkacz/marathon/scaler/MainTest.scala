@@ -246,7 +246,7 @@ class MainTest extends TestFixture with MockitoSugar {
 
   private def nonEmptyAppResponse(instancesCount: Int = 1) = {
     val response = new GetAppResponse
-    response.setApp(new mesosphere.marathon.client.model.v2.App)
+    response.setApp(new mesosphere.marathon.client.model.v2.VersionedApp)
     response.getApp.setInstances(instancesCount)
     response
   }
