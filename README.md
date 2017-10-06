@@ -50,8 +50,8 @@ After you deploy your app to Marathon, you have to add these labels:
 - *AUTOSCALE_MAXINSTANCES* (optional) - maximum number of instances after which the app cannot be autoscaled
 - *AUTOSCALE_MININSTANCES* (optional) - by setting this property, you are enabling the scale down feature that will scale down to the count of instances specified
 - *AUTOSCALE_RMQSERVER* (optional) - the RabbitMQ server name from the configuration. This allows to work with multiple RMQ servers
-- *AUTOSCALE_UPCOUNT* (optional) - count of instances which are started when the limit is reached
-- *AUTOSCALE_DOWNCOUNT* (optional) - count of instances which are suspended when the queue is empty and the scale down feature is enabled
+- *AUTOSCALE_UPCOUNT* (optional) - count of instances which are started when the limit is reached. Default value is 1.
+- *AUTOSCALE_DOWNCOUNT* (optional) - count of instances which are suspended when the queue is empty and the scale down feature is enabled. Default value is 1.
 
 #### How to add label to a Marathon application
 It is possible to add label from:

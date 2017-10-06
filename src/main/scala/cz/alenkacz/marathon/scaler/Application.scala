@@ -26,8 +26,8 @@ object ApplicationFactory extends StrictLogging {
                 maxMessagesCount: Int,
                 maxInstancesCount: Option[Int] = None,
                 minInstancesCount: Option[Int] = None,
-                upCount: Option[Int] = Some(1),
-                downCount: Option[Int] = Some(1)): Try[Application] = {
+                upCount: Option[Int] = None,
+                downCount: Option[Int] = None): Try[Application] = {
     rabbitMqClient.queueExists(vhost, queueName) match {
       case Success(true) =>
         Success(
@@ -61,7 +61,7 @@ object ApplicationFactory extends StrictLogging {
                                      maxMessagesCount: Int,
                                      maxInstancesCount: Option[Int] = None,
                                      minInstancesCount: Option[Int] = None,
-                                     upCount: Int = 1,
-                                     downCount: Int = 1)
+                                     upCount: Int,
+                                     downCount: Int)
       extends Application
 }
