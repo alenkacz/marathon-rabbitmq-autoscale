@@ -9,28 +9,30 @@ import collection.JavaConverters._
 object MarathonProxy extends StrictLogging {
   def scaleUp(marathonClient: Marathon,
               applicationName: String,
-              maxInstancesCount: Option[Int]): Unit = {
+              maxInstancesCount: Option[Int],
+              upCount: Int): Unit = {
     scale(
       marathonClient,
       applicationName,
       maxInstancesCount,
       None,
       (applicationState, maxInstancesCount, _) =>
-        Math.min(applicationState.getInstances + 1,
+        Math.min(applicationState.getInstances + upCount,
                  maxInstancesCount.getOrElse(Integer.MAX_VALUE))
     )
   }
 
   def scaleDown(marathonClient: Marathon,
                 applicationName: String,
-                minInstancesCount: Option[Int]): Unit = {
+                minInstancesCount: Option[Int],
+                downCount: Int): Unit = {
     scale(
       marathonClient,
       applicationName,
       None,
       minInstancesCount,
       (applicationState, _, minInstancesCount) =>
-        Math.max(applicationState.getInstances - 1,
+        Math.max(applicationState.getInstances - downCount,
                  minInstancesCount.getOrElse(Integer.MIN_VALUE))
     )
   }
@@ -70,6 +72,8 @@ object MarathonProxy extends StrictLogging {
   val MAX_INSTANCES_LABEL_NAME = "AUTOSCALE_MAXINSTANCES"
   val MIN_INSTANCES_LABEL_NAME = "AUTOSCALE_MININSTANCES"
   val RMQ_SERVER_LABEL_NAME = "AUTOSCALE_RMQSERVER"
+  val UP_COUNT_LABEL_NAME = "AUTOSCALE_UPCOUNT"
+  val DOWN_COUNT_LABEL_NAME = "AUTOSCALE_DOWNCOUNT"
 
   def findAppsWithAutoscaleLabels(
       marathonClient: Marathon,
@@ -106,6 +110,14 @@ object MarathonProxy extends StrictLogging {
           .find(_._1.equalsIgnoreCase(RMQ_SERVER_LABEL_NAME))
           .map(_._2.trim)
           .getOrElse("")
+        val upCount = labels
+          .find(_._1.equalsIgnoreCase(UP_COUNT_LABEL_NAME))
+          .map(_._2)
+          .map(_.toInt)
+        val downCount = labels
+          .find(_._1.equalsIgnoreCase(DOWN_COUNT_LABEL_NAME))
+          .map(_._2)
+          .map(_.toInt)
         ApplicationFactory.tryCreate(rabbitMqClients(serverName),
                                      a.getId,
                                      serverName,
@@ -113,7 +125,9 @@ object MarathonProxy extends StrictLogging {
                                      queueName,
                                      maxMessagesCount,
                                      maxInstancesCount,
-                                     minInstancesCount)
+                                     minInstancesCount,
+                                     upCount,
+                                     downCount)
       })
       .filter(_.isSuccess)
       .map(_.get)

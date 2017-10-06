@@ -64,7 +64,7 @@ object Main extends StrictLogging {
         case (true, false) =>
           logger.debug(
             s"Application's ${app.name} queue '${app.queueName}' is over limit, app will be scaled up")
-          scaleUp(marathonClient, app.name, app.maxInstancesCount)
+          scaleUp(marathonClient, app.name, app.maxInstancesCount, app.upCount)
           Some(app)
         case (true, true) =>
           logger.debug(
@@ -84,7 +84,10 @@ object Main extends StrictLogging {
         case (true, false) =>
           logger.debug(
             s"Application's ${app.name} queue '${app.queueName}' is empty, we can decrease number of instances")
-          scaleDown(marathonClient, app.name, app.minInstancesCount)
+          scaleDown(marathonClient,
+                    app.name,
+                    app.minInstancesCount,
+                    app.downCount)
           Some(app)
         case (true, true) =>
           logger.debug(
