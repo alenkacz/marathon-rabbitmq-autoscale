@@ -13,6 +13,8 @@ trait Application {
   def maxInstancesCount: Option[Int]
   def minInstancesCount: Option[Int]
   def rmqServerName: String
+  def upCount: Int
+  def downCount: Int
 }
 
 object ApplicationFactory extends StrictLogging {
@@ -23,7 +25,9 @@ object ApplicationFactory extends StrictLogging {
                 queueName: String,
                 maxMessagesCount: Int,
                 maxInstancesCount: Option[Int] = None,
-                minInstancesCount: Option[Int] = None): Try[Application] = {
+                minInstancesCount: Option[Int] = None,
+                upCount: Option[Int] = None,
+                downCount: Option[Int] = None): Try[Application] = {
     rabbitMqClient.queueExists(vhost, queueName) match {
       case Success(true) =>
         Success(
@@ -33,7 +37,9 @@ object ApplicationFactory extends StrictLogging {
                           queueName,
                           maxMessagesCount,
                           maxInstancesCount,
-                          minInstancesCount))
+                          minInstancesCount,
+                          upCount.getOrElse(1),
+                          downCount.getOrElse(1)))
       case Failure(e) =>
         logger.warn(
           s"Unable to verify that '$queueName' for application '$name' exists. Ignoring this application configuration.",
@@ -54,6 +60,8 @@ object ApplicationFactory extends StrictLogging {
                                      queueName: String,
                                      maxMessagesCount: Int,
                                      maxInstancesCount: Option[Int] = None,
-                                     minInstancesCount: Option[Int] = None)
+                                     minInstancesCount: Option[Int] = None,
+                                     upCount: Int,
+                                     downCount: Int)
       extends Application
 }

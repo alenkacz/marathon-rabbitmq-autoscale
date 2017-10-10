@@ -24,7 +24,9 @@ object ExtendedConfig {
             a.getString("queue"),
             a.getInt("maxMessagesCount"),
             a.getOptionalInt("maxInstancesCount"),
-            a.getOptionalInt("minInstancesCount")
+            a.getOptionalInt("minInstancesCount"),
+            a.getOptionalInt("upCount"),
+            a.getOptionalInt("downCount")
         ))
         .filter(_.isSuccess)
         .map(_.get)

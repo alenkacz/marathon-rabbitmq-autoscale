@@ -5,7 +5,7 @@ import java.time.{Duration, Instant}
 import com.rabbitmq.client.Channel
 import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.marathon.client.Marathon
-import mesosphere.marathon.client.model.v2.{GetAppResponse, GetAppsResponse}
+import mesosphere.marathon.client.model.v2.{GetAppResponse, GetAppsResponse, App}
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentMatcher, ArgumentMatchers, Matchers, Mockito}
 import org.scalatest.junit.JUnitRunner
@@ -43,6 +43,23 @@ class MainTest extends TestFixture with MockitoSugar {
                                                   ArgumentMatchers.any())
   }
 
+  it should "call marathon when limit is reached and app is scaled by 2" in { fixture =>
+    sendMessages(fixture.rmqClients("").channel, "test", 15)
+    val marathonMock = mock[Marathon]
+    when(marathonMock.getApp("test")).thenReturn(nonEmptyAppResponse())
+    waitForMessages(
+      () => fixture.rmqClients("").messageCount("/", "test").get == 15,
+      Duration.ofSeconds(10))
+    Main.checkAndScale(Array(TestApplication("test", "", "/", "test", 10, None, None, 2)),
+      fixture.rmqClients,
+      marathonMock,
+      app => false)
+
+    verify(marathonMock, atLeastOnce()).updateApp(ArgumentMatchers.any(),
+      ArgumentMatchers.argThat(new AppMatcher(3)),
+      ArgumentMatchers.any())
+  }
+
   it should "call marathon when queue is empty and scaledown is enabled" in {
     fixture =>
       val marathonMock = mock[Marathon]
@@ -62,6 +79,34 @@ class MainTest extends TestFixture with MockitoSugar {
                          fixture.rmqClients,
                          marathonMock,
                          app => false)
+
+      verify(marathonMock, atLeastOnce()).updateApp(
+        ArgumentMatchers.any(),
+        ArgumentMatchers.argThat(new AppMatcher(0)),
+        ArgumentMatchers.any())
+  }
+
+
+  it should "call marathon when queue is empty, scaledown is enabled and scaled by 2" in {
+    fixture =>
+      val marathonMock = mock[Marathon]
+      val appResponse = nonEmptyAppResponse(2)
+      when(marathonMock.getApp("test")).thenReturn(appResponse)
+      fixture.rmqClients("").purgeQueue("/", "test")
+      waitForMessages(
+        () => fixture.rmqClients("").messageCount("/", "test").get == 0,
+        Duration.ofSeconds(10))
+      Main.checkAndScale(Array(
+        TestApplication("test",
+          "",
+          "/",
+          "test",
+          10,
+          minInstancesCount = Some(0),
+          downCount = 2)),
+        fixture.rmqClients,
+        marathonMock,
+        app => false)
 
       verify(marathonMock, atLeastOnce()).updateApp(
         ArgumentMatchers.any(),
@@ -257,7 +302,9 @@ class MainTest extends TestFixture with MockitoSugar {
                              queueName: String,
                              maxMessagesCount: Int,
                              maxInstancesCount: Option[Int] = None,
-                             minInstancesCount: Option[Int] = None)
+                             minInstancesCount: Option[Int] = None,
+                             upCount: Int = 1,
+                             downCount: Int = 1)
       extends Application
 
   class AppMatcher(instancesCount: Int)
