@@ -137,8 +137,17 @@ object Main extends StrictLogging {
     val rmqClients = setupRabbitMqClients(config)
     logger.debug("Connected to rabbitMq server")
     val marathonConfig = config.getConfig("marathon")
-    val marathonClient =
-      MarathonClient.getInstance(marathonConfig.getString("url"))
+
+    val marathonClient = if (marathonConfig.hasPath("password")) {
+        MarathonClient.getInstanceWithBasicAuth(
+          marathonConfig.getString("url"),
+          marathonConfig.getString("username"),
+          marathonConfig.getString("password")
+        )
+    } else {
+        MarathonClient.getInstance(marathonConfig.getString("url"))
+    }
+
     logger.debug("Connected to marathon server")
     val applications = getApplicationConfigurationList(config, rmqClients)
     logger.info(s"Loaded ${applications.length} applications")
